@@ -1,2003 +1,1252 @@
-// Settings Management
+/* =========================
+   Settings Management
+========================= */
 function initializeSettings(toolModal) {
     const settingsToggle = document.getElementById('settings-toggle');
     const settingsModal = document.getElementById('settings-modal');
-    const closeSettingsBtn = document.getElementById('close-settings-modal');
+    const closeSettings = document.getElementById('close-settings-modal');
     const themeSelect = document.getElementById('theme-select');
-    const resetSettingsBtn = document.getElementById('reset-settings');
-    
+    const resetBtn = document.getElementById('reset-settings');
+  
     loadSettings();
-    
+  
     if (settingsToggle) {
-        settingsToggle.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            if (toolModal) {
-                toolModal.style.display = 'none';
-            }
-            
-            showSimpleSettingsModal();
-        });
+      settingsToggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (toolModal) toolModal.style.display = 'none';
+        showSimpleSettingsModal();
+      });
     }
-    
-    if (closeSettingsBtn) {
-        closeSettingsBtn.addEventListener('click', () => {
-            settingsModal.style.display = 'none';
-        });
-    } else {
-        console.error('Close settings button not found!');
+    if (closeSettings) {
+      closeSettings.addEventListener('click', () => (settingsModal.style.display = 'none'));
     }
-    
     if (themeSelect) {
-        themeSelect.addEventListener('change', (e) => {
-            applyTheme(e.target.value);
-            saveSettings();
-        });
-    } else {
-        console.error('Theme select not found!');
+      themeSelect.addEventListener('change', (e) => {
+        applyTheme(e.target.value);
+        saveSettings();
+      });
     }
-    
-    if (resetSettingsBtn) {
-        resetSettingsBtn.addEventListener('click', () => {
-            resetSettings();
-        });
-    } else {
-        console.error('Reset settings button not found!');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', resetSettings);
     }
-    
+  
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && settingsModal.style.display === 'block') {
-            settingsModal.style.display = 'none';
-        }
+      if (e.key === 'Escape' && settingsModal.style.display === 'block') {
+        settingsModal.style.display = 'none';
+      }
     });
-}
-
-function loadSettings() {
+  }
+  
+  function loadSettings() {
     const settings = JSON.parse(localStorage.getItem('gfs-settings') || '{}');
-    
+  
     const theme = settings.theme || 'dark';
     applyTheme(theme);
     const themeSelect = document.getElementById('theme-select');
-    if (themeSelect) {
-        themeSelect.value = theme;
-    } else {
-        console.error('Theme select element not found!');
-    }
-    
-    const toolOrder = settings.toolOrder || ['range-splitting', 'label-preview', 'range-jumping', 'route-mapping'];
+    if (themeSelect) themeSelect.value = theme;
+  
+    const toolOrder = settings.toolOrder || ['range-splitting', 'label-preview', 'range-jumping', 'route-mapping', 'sql-search-macro'];
     const toolVisibility = settings.toolVisibility || {
-        'range-splitting': true,
-        'label-preview': true,
-        'range-jumping': true,
-        'route-mapping': true
+      'range-splitting': true,
+      'label-preview': true,
+      'range-jumping': true,
+      'route-mapping': true,
+      'formatter': true,
+      'sql-search-macro': true
     };
-    
+  
     applyToolOrder(toolOrder);
     applyToolVisibility(toolVisibility);
-}
-
-function saveSettings() {
+  }
+  
+  function saveSettings() {
     const settings = {
-        theme: document.getElementById('theme-select').value,
-        toolOrder: getCurrentToolOrder(),
-        toolVisibility: getCurrentToolVisibility()
+      theme: document.getElementById('theme-select')?.value || 'dark',
+      toolOrder: getCurrentToolOrder(),
+      toolVisibility: getCurrentToolVisibility()
     };
     localStorage.setItem('gfs-settings', JSON.stringify(settings));
-}
-
-function applyTheme(theme) {
-    const body = document.body;
-    
+  }
+  
+  function applyTheme(theme) {
     if (theme === 'auto') {
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        body.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.body.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
     } else {
-        body.setAttribute('data-theme', theme);
+      document.body.setAttribute('data-theme', theme);
     }
-}
-
-function resetSettings() {
+  }
+  
+  function resetSettings() {
     localStorage.removeItem('gfs-settings');
     location.reload();
-}
-
-// Tool Management
-function populateToolOrderList() {
+  }
+  
+  /* =========================
+     Tool Management (Settings)
+  ========================= */
+  function populateToolOrderList() {
     const toolOrderList = document.getElementById('tool-order-list');
     const settings = JSON.parse(localStorage.getItem('gfs-settings') || '{}');
-    const toolOrder = settings.toolOrder || ['range-splitting', 'label-preview', 'range-jumping', 'route-mapping'];
+    const toolOrder = settings.toolOrder || ['range-splitting', 'label-preview', 'range-jumping', 'route-mapping', 'formatter', 'sql-search-macro',];
     const toolVisibility = settings.toolVisibility || {
-        'range-splitting': true,
-        'label-preview': true,
-        'range-jumping': true,
-        'route-mapping': true
+      'range-splitting': true,
+      'label-preview': true,
+      'range-jumping': true,
+      'route-mapping': true,
+      'formatter': true,
+      'sql-search-macro': true
     };
-    
+  
     const toolData = {
-        'range-splitting': { name: 'Range Splitting', description: 'Split ranges into smaller segments', icon: 'fas fa-cut' },
-        'label-preview': { name: 'Label Preview', description: 'Preview and generate shipping labels', icon: 'fas fa-tag' },
-        'range-jumping': { name: 'Range Jumping', description: 'Generate UPDATE scripts for range numbers', icon: 'fas fa-arrow-right' },
-        'route-mapping': { name: 'Route Mapping', description: 'Generate SQL INSERT statements for carrier routes', icon: 'fas fa-route' }
+      'range-splitting': { name: 'Range Splitting', description: 'Split ranges into smaller segments', icon: 'fas fa-cut' },
+      'label-preview': { name: 'Label Preview', description: 'Preview and generate shipping labels', icon: 'fas fa-tag' },
+      'range-jumping': { name: 'Range Jumping', description: 'Generate UPDATE scripts for range numbers', icon: 'fas fa-arrow-right' },
+      'route-mapping': { name: 'Route Mapping', description: 'Generate SQL INSERT statements for carrier routes', icon: 'fas fa-route' },
+      'sql-search-macro': { name: 'SQL Search Macro', description: 'Build WHERE IN list from consignments', icon: 'fas fa-database' },
+      'formatter': { name: 'XML & JSON Formatter', description: 'Pretty-print or minify JSON/XML', icon: 'fas fa-code' }
     };
-    
+  
     toolOrderList.innerHTML = '';
-    
-    toolOrder.forEach(toolId => {
-        const tool = toolData[toolId];
-        if (tool) {
-            const item = document.createElement('div');
-            item.className = 'tool-order-item';
-            item.draggable = true;
-            item.dataset.toolId = toolId;
-            
-            item.innerHTML = `
-                <div class="drag-handle">
-                    <i class="fas fa-grip-vertical"></i>
-                </div>
-                <div class="tool-info">
-                    <div class="tool-icon">
-                        <i class="${tool.icon}"></i>
-                    </div>
-                    <div class="tool-details">
-                        <h4>${tool.name}</h4>
-                        <p>${tool.description}</p>
-                    </div>
-                </div>
-                <div class="tool-toggle">
-                    <div class="toggle-switch ${toolVisibility[toolId] ? 'active' : ''}" data-tool-id="${toolId}"></div>
-                </div>
-            `;
-            
-            toolOrderList.appendChild(item);
-        }
+    toolOrder.forEach((toolId) => {
+      const tool = toolData[toolId];
+      if (!tool) return;
+      const item = document.createElement('div');
+      item.className = 'tool-order-item';
+      item.draggable = true;
+      item.dataset.toolId = toolId;
+      item.innerHTML = `
+        <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
+        <div class="tool-info">
+          <div class="tool-icon"><i class="${tool.icon}"></i></div>
+          <div class="tool-details">
+            <h4>${tool.name}</h4>
+            <p>${tool.description}</p>
+          </div>
+        </div>
+        <div class="tool-toggle">
+          <div class="toggle-switch ${toolVisibility[toolId] ? 'active' : ''}" data-tool-id="${toolId}"></div>
+        </div>`;
+      toolOrderList.appendChild(item);
     });
-    
+  
     initializeDragAndDrop();
     initializeToolToggles();
-}
-
-function initializeDragAndDrop() {
+  }
+  
+  function initializeDragAndDrop() {
     const toolOrderList = document.getElementById('tool-order-list');
-    let draggedElement = null;
-    
+    let dragged = null;
+  
     toolOrderList.addEventListener('dragstart', (e) => {
-        draggedElement = e.target.closest('.tool-order-item');
-        draggedElement.classList.add('dragging');
+      dragged = e.target.closest('.tool-order-item');
+      if (dragged) dragged.classList.add('dragging');
     });
-    
-    toolOrderList.addEventListener('dragend', (e) => {
-        if (draggedElement) {
-            draggedElement.classList.remove('dragging');
-            draggedElement = null;
-        }
+  
+    toolOrderList.addEventListener('dragend', () => {
+      if (dragged) dragged.classList.remove('dragging');
+      dragged = null;
     });
-    
+  
     toolOrderList.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        const afterElement = getDragAfterElement(toolOrderList, e.clientY);
-        if (draggedElement) {
-            if (afterElement == null) {
-                toolOrderList.appendChild(draggedElement);
-        } else {
-                toolOrderList.insertBefore(draggedElement, afterElement);
-            }
-        }
+      e.preventDefault();
+      const after = getDragAfterElement(toolOrderList, e.clientY);
+      if (!dragged) return;
+      if (!after) toolOrderList.appendChild(dragged);
+      else toolOrderList.insertBefore(dragged, after);
     });
-    
+  
     toolOrderList.addEventListener('drop', () => {
-        saveSettings();
-        applyToolOrder(getCurrentToolOrder());
+      saveSettings();
+      applyToolOrder(getCurrentToolOrder());
     });
-}
-
-function getDragAfterElement(container, y) {
-    const draggableElements = [...container.querySelectorAll('.tool-order-item:not(.dragging)')];
-    
-    return draggableElements.reduce((closest, child) => {
-        const box = child.getBoundingClientRect();
-        const offset = y - box.top - box.height / 2;
-        
-        if (offset < 0 && offset > closest.offset) {
-            return { offset: offset, element: child };
-        } else {
-            return closest;
-        }
+  }
+  
+  function getDragAfterElement(container, y) {
+    const els = [...container.querySelectorAll('.tool-order-item:not(.dragging)')];
+    return els.reduce((closest, child) => {
+      const box = child.getBoundingClientRect();
+      const offset = y - box.top - box.height / 2;
+      if (offset < 0 && offset > closest.offset) return { offset, element: child };
+      return closest;
     }, { offset: Number.NEGATIVE_INFINITY }).element;
-}
-
-function initializeToolToggles() {
-    document.querySelectorAll('.toggle-switch').forEach(toggle => {
-        toggle.addEventListener('click', () => {
-            toggle.classList.toggle('active');
-            saveSettings();
-            applyToolVisibility(getCurrentToolVisibility());
-        });
+  }
+  
+  function initializeToolToggles() {
+    document.querySelectorAll('.toggle-switch').forEach((toggle) => {
+      toggle.addEventListener('click', () => {
+        toggle.classList.toggle('active');
+        saveSettings();
+        applyToolVisibility(getCurrentToolVisibility());
+      });
     });
-}
-
-function getCurrentToolOrder() {
-    const toolOrderList = document.getElementById('tool-order-list');
-    return Array.from(toolOrderList.children).map(item => item.dataset.toolId);
-}
-
-function getCurrentToolVisibility() {
-    const visibility = {};
-    document.querySelectorAll('.toggle-switch').forEach(toggle => {
-        visibility[toggle.dataset.toolId] = toggle.classList.contains('active');
+  }
+  
+  function getCurrentToolOrder() {
+    const list = document.getElementById('tool-order-list');
+    if (!list) return [];
+    return Array.from(list.children).map((el) => el.dataset.toolId);
+  }
+  
+  function getCurrentToolVisibility() {
+    const vis = {};
+    document.querySelectorAll('.toggle-switch').forEach((t) => {
+      vis[t.dataset.toolId] = t.classList.contains('active');
     });
-    return visibility;
-}
-
-function applyToolOrder(toolOrder) {
-    const toolsContainer = document.querySelector('.tools-grid');
-    const toolCards = Array.from(toolsContainer.children);
-    
-    toolOrder.forEach(toolId => {
-        const toolCard = toolCards.find(card => card.querySelector(`[data-tool="${toolId}"]`));
-        if (toolCard) {
-            toolsContainer.appendChild(toolCard);
-        }
+    return vis;
+  }
+  
+  function applyToolOrder(order) {
+    const grid = document.querySelector('.tools-grid');
+    const cards = Array.from(grid.children);
+    order.forEach((toolId) => {
+      const card = cards.find((c) => c.querySelector(`[data-tool="${toolId}"]`));
+      if (card) grid.appendChild(card);
     });
-}
-
-function applyToolVisibility(toolVisibility) {
-    Object.entries(toolVisibility).forEach(([toolId, isVisible]) => {
-        const toolCard = document.querySelector(`[data-tool="${toolId}"]`).closest('.tool-card');
-        if (toolCard) {
-            toolCard.style.display = isVisible ? 'block' : 'none';
-        }
+  }
+  
+  function applyToolVisibility(toolVisibility) {
+    Object.entries(toolVisibility).forEach(([toolId, visible]) => {
+      const card = document.querySelector(`[data-tool="${toolId}"]`)?.closest('.tool-card');
+      if (card) card.style.display = visible ? 'block' : 'none';
     });
-}
-
-// Simple Settings Modal
-function showSimpleSettingsModal() {
-    const existingModal = document.getElementById('simple-settings-modal');
-    if (existingModal) {
-        existingModal.remove();
-    }
+  }
+  
+  /* =========================
+     Simple Settings Modal
+  ========================= */
+  function showSimpleSettingsModal() {
+    const existing = document.getElementById('simple-settings-modal');
+    if (existing) existing.remove();
+  
     const modal = document.createElement('div');
     modal.id = 'simple-settings-modal';
     modal.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.8);
-        z-index: 10000;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    `;
-    
-    const currentTheme = document.body.getAttribute('data-theme') || 'dark';
-    modal.setAttribute('data-theme', currentTheme);
+      position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:10000;
+      display:flex;align-items:center;justify-content:center;`;
+    modal.setAttribute('data-theme', document.body.getAttribute('data-theme') || 'dark');
+  
     const content = document.createElement('div');
     content.style.cssText = `
-        background: var(--bg-primary, #2a2a2a);
-        color: var(--text-primary, #ffffff);
-        padding: 2rem;
-        border-radius: 12px;
-        width: 90%;
-        max-width: 600px;
-        max-height: 80vh;
-        overflow-y: auto;
-        border: 1px solid var(--border-color, #444);
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-    `;
-    
+      background:var(--bg-primary,#2a2a2a);color:var(--text-primary,#fff);
+      padding:2rem;border-radius:12px;width:90%;max-width:600px;max-height:80vh;
+      overflow:auto;border:1px solid var(--border-color,#444)`;
     content.innerHTML = `
-        <div style="position: relative; margin-bottom: 1rem;">
-            <h2 style="margin: 0; color: var(--text-primary, #ffffff);">Settings</h2>
-            <button id="close-simple-settings" class="close-modal-btn" style="position: absolute; top: 0; right: 0; background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; font-size: 16px;"><i class="fas fa-times"></i></button>
+      <div style="position:relative;margin-bottom:1rem;">
+        <h2 style="margin:0;">Settings</h2>
+        <button id="close-simple-settings" class="close-modal-btn"
+          style="position:absolute;top:0;right:0;width:40px;height:40px;border-radius:50%;
+                 border:1px solid var(--border-color);background:var(--bg-tertiary);color:var(--text-primary);">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div style="height:1px;background:var(--border-color,#666);margin:1rem 0 1.5rem;"></div>
+      <h3>Theme</h3>
+      <div style="display:flex;align-items:center;gap:1rem;">
+        <span>Light</span>
+        <div id="theme-toggle-slider" style="width:60px;height:30px;border-radius:15px;border:1px solid var(--border-color,#666);position:relative;cursor:pointer;">
+          <div style="position:absolute;top:2px;left:2px;width:24px;height:24px;border-radius:50%;"></div>
         </div>
-        
-        <div style="height: 1px; background: var(--border-color, #666); margin-bottom: 1.5rem;"></div>
-        
-        <div style="margin-bottom: 2rem;">
-            <h3 style="color: var(--text-primary, #ffffff); margin-bottom: 1rem;">Theme</h3>
-            <div style="display: flex; align-items: center; gap: 1rem;">
-                <span style="color: var(--text-secondary, #ccc); font-size: 0.9rem;">Light</span>
-                <div id="theme-toggle-slider" style="
-                    width: 60px;
-                    height: 30px;
-                    background: var(--bg-secondary, #333);
-                    border-radius: 15px;
-                    cursor: pointer;
-                    position: relative;
-                    transition: background 0.3s ease;
-                    border: 1px solid var(--border-color, #666);
-                ">
-                    <div style="
-                        position: absolute;
-                        top: 2px;
-                        left: 2px;
-                        width: 24px;
-                        height: 24px;
-                        background: var(--text-primary, white);
-                        border-radius: 50%;
-                        transition: transform 0.3s ease;
-                    "></div>
-                </div>
-                <span style="color: var(--text-secondary, #ccc); font-size: 0.9rem;">Dark</span>
-            </div>
-        </div>
-        
-        <div style="height: 1px; background: var(--border-color, #666); margin: 1.5rem 0;"></div>
-        
-        <div style="margin-bottom: 2rem;">
-            <h3 style="color: var(--text-primary, #ffffff); margin-bottom: 1rem;">Tool Management</h3>
-            <p style="color: var(--text-secondary, #ccc); margin-bottom: 1rem;">Drag tools to reorder them, or toggle to show/hide tools you don't use.</p>
-            <div id="simple-tool-list" style="display: flex; flex-direction: column; gap: 0.5rem;">
-                <!-- Tools will be populated here -->
-            </div>
-        </div>
-        
-        <div style="height: 1px; background: var(--border-color, #666); margin: 1.5rem 0;"></div>
-        
-        <div style="text-align: center;">
-            <button id="reset-simple-settings" style="background: var(--bg-secondary, #666); border: 1px solid var(--border-color, #888); color: var(--text-primary, #fff); padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer;">Reset to Defaults</button>
-        </div>
+        <span>Dark</span>
+      </div>
+      <div style="height:1px;background:var(--border-color,#666);margin:1.5rem 0;"></div>
+      <h3>Tool Management</h3>
+      <p>Drag tools to reorder them, or toggle to show/hide tools you don't use.</p>
+      <div id="simple-tool-list" style="display:flex;flex-direction:column;gap:.5rem;"></div>
+      <div style="height:1px;background:var(--border-color,#666);margin:1.5rem 0;"></div>
+      <div style="text-align:center;">
+        <button id="reset-simple-settings" class="btn btn-outline">Reset to Defaults</button>
+      </div>
     `;
-    
     modal.appendChild(content);
     document.body.appendChild(modal);
-    
-    document.getElementById('close-simple-settings').addEventListener('click', () => {
-        modal.remove();
+  
+    document.getElementById('close-simple-settings').onclick = () => modal.remove();
+    document.getElementById('reset-simple-settings').onclick = () => {
+      localStorage.removeItem('gfs-settings'); location.reload();
+    };
+  
+    const slider = document.getElementById('theme-toggle-slider');
+    const knob = slider.querySelector('div');
+    const isDark = (document.body.getAttribute('data-theme') || 'dark') === 'dark';
+    const setSlider = (dark) => {
+      slider.style.background = dark ? '#333333' : '#ffffff';
+      slider.style.borderColor = dark ? '#555555' : '#000000';
+      knob.style.background = dark ? '#ffffff' : '#000000';
+      knob.style.transform = dark ? 'translateX(30px)' : 'translateX(0)';
+    };
+    setSlider(isDark);
+    slider.addEventListener('click', () => {
+      const dark = !(document.body.getAttribute('data-theme') === 'dark');
+      applyTheme(dark ? 'dark' : 'light');
+      modal.setAttribute('data-theme', dark ? 'dark' : 'light');
+      setSlider(dark);
+      saveSettings();
     });
-    
-    document.getElementById('reset-simple-settings').addEventListener('click', () => {
-        localStorage.removeItem('gfs-settings');
-        location.reload();
+  
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+    document.addEventListener('keydown', function esc(e) {
+      if (e.key === 'Escape') { modal.remove(); document.removeEventListener('keydown', esc); }
     });
-    const themeSlider = document.getElementById('theme-toggle-slider');
-    const themeSliderHandle = themeSlider.querySelector('div');
-    if (currentTheme === 'dark') {
-        themeSlider.style.background = '#333333';
-        themeSlider.style.borderColor = '#555555';
-        themeSliderHandle.style.background = '#ffffff';
-        themeSliderHandle.style.transform = 'translateX(30px)';
-    } else {
-        themeSlider.style.background = '#ffffff';
-        themeSlider.style.borderColor = '#000000';
-        themeSliderHandle.style.background = '#000000';
-        themeSliderHandle.style.transform = 'translateX(0px)';
-    }
-    
-    themeSlider.addEventListener('click', () => {
-        const isDark = themeSlider.style.background === 'rgb(51, 51, 51)';
-        
-        if (isDark) {
-            themeSlider.style.background = '#ffffff';
-            themeSlider.style.borderColor = '#000000';
-            themeSliderHandle.style.background = '#000000';
-            themeSliderHandle.style.transform = 'translateX(0px)';
-            applyTheme('light');
-            modal.setAttribute('data-theme', 'light');
-        } else {
-            themeSlider.style.background = '#333333';
-            themeSlider.style.borderColor = '#555555';
-            themeSliderHandle.style.background = '#ffffff';
-            themeSliderHandle.style.transform = 'translateX(30px)';
-            applyTheme('dark');
-            modal.setAttribute('data-theme', 'dark');
-        }
-        
-        saveSettings();
-    });
-    
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.remove();
-        }
-    });
-    
-    document.addEventListener('keydown', function escapeHandler(e) {
-        if (e.key === 'Escape') {
-            modal.remove();
-            document.removeEventListener('keydown', escapeHandler);
-        }
-    });
-    
+  
     populateSimpleToolList();
-}
-
-function populateSimpleToolList() {
+  }
+  
+  function populateSimpleToolList() {
     const toolList = document.getElementById('simple-tool-list');
     const settings = JSON.parse(localStorage.getItem('gfs-settings') || '{}');
-    
-    const toolOrder = (settings.toolOrder && settings.toolOrder.length > 0) ? settings.toolOrder : ['range-splitting', 'label-preview', 'range-jumping', 'route-mapping'];
-    const toolVisibility = (settings.toolVisibility && Object.keys(settings.toolVisibility).length > 0) ? settings.toolVisibility : {
-        'range-splitting': true,
-        'label-preview': true,
-        'range-jumping': true,
-        'route-mapping': true
+    const toolOrder = (settings.toolOrder && settings.toolOrder.length)
+      ? settings.toolOrder
+      : ['range-splitting', 'label-preview', 'range-jumping', 'route-mapping', 'sql-search-macro'];
+    const toolVisibility = settings.toolVisibility || {
+      'range-splitting': true,
+      'label-preview': true,
+      'range-jumping': true,
+      'route-mapping': true,
+      'sql-search-macro': true
     };
-    
+  
     const toolData = {
-        'range-splitting': { name: 'Range Splitting', description: 'Split ranges into smaller segments' },
-        'label-preview': { name: 'Label Preview', description: 'Preview and generate shipping labels' },
-        'range-jumping': { name: 'Range Jumping', description: 'Generate UPDATE scripts for range numbers' },
-        'route-mapping': { name: 'Route Mapping', description: 'Generate SQL INSERT statements for carrier routes' }
+      'range-splitting': { name: 'Range Splitting', description: 'Split ranges into smaller segments', icon: 'fas fa-cut' },
+      'label-preview': { name: 'Label Preview', description: 'Preview and generate shipping labels', icon: 'fas fa-tag' },
+      'range-jumping': { name: 'Range Jumping', description: 'Generate UPDATE scripts for range numbers', icon: 'fas fa-arrow-right' },
+      'route-mapping': { name: 'Route Mapping', description: 'Generate SQL INSERT statements for carrier routes', icon: 'fas fa-route' },
+      'sql-search-macro': { name: 'SQL Search Macro', description: 'Build WHERE IN list from consignments', icon: 'fas fa-database' },
+      'formatter': { name: 'XML & JSON Formatter', description: 'Pretty-print or minify JSON/XML', icon: 'fas fa-code' }
     };
-    
+  
+  
     toolList.innerHTML = '';
-    
-    toolOrder.forEach(toolId => {
-        const tool = toolData[toolId];
-        if (tool) {
-            const item = document.createElement('div');
-            item.className = 'simple-tool-item';
-            item.draggable = true;
-            item.dataset.toolId = toolId;
-            item.style.cssText = `
-                display: flex;
-                align-items: center;
-                gap: 1rem;
-                padding: 1rem;
-                background: var(--bg-secondary, #333);
-                border: 1px solid var(--border-color, #555);
-                border-radius: 8px;
-                cursor: move;
-                transition: all 0.2s ease;
-            `;
-            
-            item.innerHTML = `
-                <div style="color: var(--text-secondary, #888); cursor: grab; padding: 0.25rem;">
-                    ⋮⋮
-                </div>
-                <div style="flex: 1;">
-                    <h4 style="margin: 0; color: var(--text-primary, #ffffff);">${tool.name}</h4>
-                    <p style="margin: 0; color: var(--text-secondary, #ccc); font-size: 0.9rem;">${tool.description}</p>
-                </div>
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <span style="color: var(--text-secondary, #ccc); font-size: 0.9rem;">Show</span>
-                    <div class="simple-toggle" data-tool-id="${toolId}" style="
-                        width: 44px;
-                        height: 24px;
-                        background: ${toolVisibility[toolId] ? '#4CAF50' : 'var(--bg-secondary, #666)'};
-                        border-radius: 12px;
-                        cursor: pointer;
-                        position: relative;
-                        transition: background 0.3s ease;
-                    ">
-                        <div style="
-                            position: absolute;
-                            top: 2px;
-                            left: 2px;
-                            width: 20px;
-                            height: 20px;
-                            background: var(--text-primary, white);
-                            border-radius: 50%;
-                            transition: transform 0.3s ease;
-                            transform: translateX(${toolVisibility[toolId] ? '20px' : '0px'});
-                        "></div>
-                    </div>
-                </div>
-            `;
-            
-            toolList.appendChild(item);
-        }
+    toolOrder.forEach((toolId) => {
+      const tool = toolData[toolId];
+      if (!tool) return;
+      const item = document.createElement('div');
+      item.className = 'simple-tool-item';
+      item.draggable = true;
+      item.dataset.toolId = toolId;
+      item.style.cssText = `
+        display:flex;align-items:center;gap:1rem;padding:1rem;
+        background:var(--bg-secondary,#333);border:1px solid var(--border-color,#555);
+        border-radius:8px;cursor:move`;
+      item.innerHTML = `
+        <div style="color:var(--text-secondary,#888);cursor:grab;">⋮⋮</div>
+        <div style="flex:1;">
+          <h4 style="margin:0;">${tool.name}</h4>
+          <p style="margin:0;opacity:.8;font-size:.9rem;">${tool.description}</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:.5rem;">
+          <span>Show</span>
+          <div class="simple-toggle" data-tool-id="${toolId}"
+               style="width:44px;height:24px;border-radius:12px;position:relative;cursor:pointer;
+                      background:${toolVisibility[toolId] ? '#4CAF50' : '#666'};">
+            <div style="position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;
+                        background:#fff;transform:translateX(${toolVisibility[toolId] ? '20px' : '0'});"></div>
+          </div>
+        </div>`;
+      toolList.appendChild(item);
     });
-    
+  
     initializeSimpleDragAndDrop();
-    document.querySelectorAll('.simple-toggle').forEach(toggle => {
-        toggle.addEventListener('click', () => {
-            const toolId = toggle.dataset.toolId;
-            const isActive = toggle.style.background === 'rgb(76, 175, 80)';
-            
-            toggle.style.background = isActive ? '#666' : '#4CAF50';
-            toggle.querySelector('div').style.transform = isActive ? 'translateX(0px)' : 'translateX(20px)';
-            
-            const settings = JSON.parse(localStorage.getItem('gfs-settings') || '{}');
-            if (!settings.toolVisibility) settings.toolVisibility = {};
-            settings.toolVisibility[toolId] = !isActive;
-            localStorage.setItem('gfs-settings', JSON.stringify(settings));
-            const toolCard = document.querySelector(`[data-tool="${toolId}"]`).closest('.tool-card');
-            if (toolCard) {
-                toolCard.style.display = !isActive ? 'block' : 'none';
-            }
-        });
+  
+    document.querySelectorAll('.simple-toggle').forEach((toggle) => {
+      toggle.addEventListener('click', () => {
+        const toolId = toggle.dataset.toolId;
+        const active = toggle.style.background === 'rgb(102, 102, 102)' ? false : true; // #666 vs #4CAF50
+        const next = !active;
+        toggle.style.background = next ? '#4CAF50' : '#666';
+        toggle.querySelector('div').style.transform = next ? 'translateX(20px)' : 'translateX(0)';
+  
+        const settings = JSON.parse(localStorage.getItem('gfs-settings') || '{}');
+        settings.toolVisibility = settings.toolVisibility || {};
+        settings.toolVisibility[toolId] = next;
+        localStorage.setItem('gfs-settings', JSON.stringify(settings));
+  
+        const card = document.querySelector(`[data-tool="${toolId}"]`)?.closest('.tool-card');
+        if (card) card.style.display = next ? 'block' : 'none';
+      });
     });
-}
-
-function initializeSimpleDragAndDrop() {
-    const toolList = document.getElementById('simple-tool-list');
-    let draggedElement = null;
-    let dropIndicator = null;
-    
-    function createDropIndicator() {
-        const indicator = document.createElement('div');
-        indicator.className = 'drop-indicator';
-        indicator.style.cssText = `
-            height: 2px;
-            background: #4CAF50;
-            margin: 2px 0;
-            border-radius: 1px;
-            opacity: 0;
-            transition: opacity 0.2s ease;
-        `;
-        return indicator;
+  }
+  
+  function initializeSimpleDragAndDrop() {
+    const list = document.getElementById('simple-tool-list');
+    let dragged = null, indicator = null;
+  
+    function createIndicator() {
+      const d = document.createElement('div');
+      d.style.cssText = 'height:2px;background:#4CAF50;margin:2px 0;border-radius:1px;opacity:0;';
+      return d;
     }
-    
-    toolList.addEventListener('dragstart', (e) => {
-        draggedElement = e.target.closest('.simple-tool-item');
-        if (draggedElement) {
-            draggedElement.style.opacity = '1';
-            draggedElement.style.transform = 'scale(1.02)';
-            draggedElement.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.3)';
-            draggedElement.style.zIndex = '1000';
-            draggedElement.style.border = '2px solid #4CAF50';
-            
-            dropIndicator = createDropIndicator();
-        }
+  
+    list.addEventListener('dragstart', (e) => {
+      dragged = e.target.closest('.simple-tool-item');
+      if (!dragged) return;
+      dragged.style.transform = 'scale(1.02)';
+      dragged.style.border = '2px solid #4CAF50';
+      indicator = createIndicator();
     });
-    
-    toolList.addEventListener('dragend', (e) => {
-        if (draggedElement) {
-            draggedElement.style.opacity = '1';
-            draggedElement.style.transform = 'scale(1)';
-            draggedElement.style.boxShadow = '';
-            draggedElement.style.zIndex = '';
-            draggedElement.style.border = '1px solid var(--border-color, #555)';
-            draggedElement = null;
-        }
-        
-        if (dropIndicator && dropIndicator.parentNode) {
-            dropIndicator.parentNode.removeChild(dropIndicator);
-        }
-        dropIndicator = null;
+    list.addEventListener('dragend', () => {
+      if (dragged) {
+        dragged.style.transform = '';
+        dragged.style.border = '1px solid var(--border-color,#555)';
+      }
+      dragged = null;
+      indicator?.remove();
+      indicator = null;
     });
-    
-    toolList.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        if (!draggedElement) return;
-        
-        const afterElement = getSimpleDragAfterElement(toolList, e.clientY);
-        
-        if (dropIndicator && dropIndicator.parentNode) {
-            dropIndicator.parentNode.removeChild(dropIndicator);
-        }
-        
-        if (afterElement) {
-            toolList.insertBefore(dropIndicator, afterElement);
-        } else {
-            toolList.appendChild(dropIndicator);
-        }
-        
-        dropIndicator.style.opacity = '1';
+    list.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      if (!dragged) return;
+      const after = getSimpleDragAfterElement(list, e.clientY);
+      indicator?.remove();
+      indicator = createIndicator();
+      if (after) list.insertBefore(indicator, after);
+      else list.appendChild(indicator);
+      indicator.style.opacity = '1';
     });
-    
-    toolList.addEventListener('dragleave', (e) => {
-        if (!toolList.contains(e.relatedTarget)) {
-            if (dropIndicator) {
-                dropIndicator.style.opacity = '0';
-            }
-        }
+    list.addEventListener('drop', () => {
+      if (!dragged) return;
+      const after = getSimpleDragAfterElement(list, Number.POSITIVE_INFINITY); // place where indicator was
+      indicator?.replaceWith(dragged);
+      indicator = null;
+      const newOrder = Array.from(list.children).map((el) => el.dataset.toolId);
+      const settings = JSON.parse(localStorage.getItem('gfs-settings') || '{}');
+      settings.toolOrder = newOrder;
+      localStorage.setItem('gfs-settings', JSON.stringify(settings));
+      applyToolOrder(newOrder);
     });
-    
-    toolList.addEventListener('drop', (e) => {
-        e.preventDefault();
-        
-        if (dropIndicator && dropIndicator.parentNode) {
-            dropIndicator.parentNode.removeChild(dropIndicator);
-        }
-        dropIndicator = null;
-        
-        if (draggedElement) {
-            const afterElement = getSimpleDragAfterElement(toolList, e.clientY);
-            
-            if (afterElement) {
-                toolList.insertBefore(draggedElement, afterElement);
-            } else {
-                toolList.appendChild(draggedElement);
-            }
-            
-            const newOrder = Array.from(toolList.children).map(item => item.dataset.toolId);
-            const settings = JSON.parse(localStorage.getItem('gfs-settings') || '{}');
-            settings.toolOrder = newOrder;
-            localStorage.setItem('gfs-settings', JSON.stringify(settings));
-            
-            applyToolOrder(newOrder);
-        }
-    });
-}
-
-function getSimpleDragAfterElement(container, y) {
-    const draggableElements = [...container.querySelectorAll('.simple-tool-item:not([style*="opacity: 0.5"])')];
-    
-    return draggableElements.reduce((closest, child) => {
-        const box = child.getBoundingClientRect();
-        const offset = y - box.top - box.height / 2;
-        
-        if (offset < 0 && offset > closest.offset) {
-            return { offset: offset, element: child };
-        } else {
-            return closest;
-        }
+  }
+  
+  function getSimpleDragAfterElement(container, y) {
+    const els = [...container.querySelectorAll('.simple-tool-item')];
+    return els.reduce((closest, child) => {
+      const box = child.getBoundingClientRect();
+      const offset = y - box.top - box.height / 2;
+      if (offset < 0 && offset > closest.offset) return { offset, element: child };
+      return closest;
     }, { offset: Number.NEGATIVE_INFINITY }).element;
-}
-
-
-// Main Application
-document.addEventListener('DOMContentLoaded', function() {
+  }
+  
+  /* =========================
+     Utilities
+  ========================= */
+  window.copyToClipboard = function (text) {
+    navigator.clipboard.writeText(text).then(() => {
+      showCopyNotification('Copied to clipboard!', 'success');
+    }).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+      showCopyNotification('Copied to clipboard!', 'success');
+    });
+  };
+  
+  function showCopyNotification(message, type = 'success') {
+    const existing = document.querySelector('.copy-notification');
+    existing?.remove();
+    const n = document.createElement('div');
+    n.className = `copy-notification copy-notification-${type}`;
+    n.innerHTML = `<div class="notification-content"><i class="fas fa-check-circle"></i><span>${message}</span></div>`;
+    document.body.appendChild(n);
+    setTimeout(() => n.classList.add('show'), 100);
+    setTimeout(() => { n.classList.remove('show'); setTimeout(() => n.remove(), 300); }, 2000);
+  }
+  
+  /* =========================
+     Tools Initializers
+  ========================= */
+  function initializeRangeSplitter() {
+    const startInput = document.getElementById('start-range');
+    const endInput = document.getElementById('end-range');
+    const slider = document.getElementById('split-percentage');
+    const pctLabel = document.getElementById('percentage-display');
+    const calcBtn = document.getElementById('calculate-split');
+    const copyBtn = document.getElementById('copy-results');
+    const clearBtn = document.getElementById('clear-inputs');
+  
+    const calc = () => {
+      const start = +startInput.value || 0;
+      const end = +endInput.value || 0;
+      const pct = +slider.value || 50;
+      if (start >= end) {
+        document.getElementById('total-range').textContent = 'Invalid range';
+        document.getElementById('available-numbers').textContent = 'Start must be less than end';
+        document.getElementById('first-range').textContent = '-';
+        document.getElementById('first-count').textContent = '-';
+        document.getElementById('second-range').textContent = '-';
+        document.getElementById('second-count').textContent = '-';
+        return;
+      }
+      const total = end - start;
+      const firstCount = Math.floor(total * (pct / 100));
+      const secondCount = total - firstCount;
+      const firstEnd = start + firstCount - 1;
+      const secondStart = firstEnd + 1;
+  
+      document.getElementById('total-range').textContent = `${start} to ${end}`;
+      document.getElementById('available-numbers').textContent = total;
+  
+      const makeBox = (a, b) =>
+        `<div class="range-copy-box"><span class="range-text">
+          <span class="clickable-number" onclick="copyToClipboard('${a}')">${a}</span>
+          <span class="range-separator"> to </span>
+          <span class="clickable-number" onclick="copyToClipboard('${b}')">${b}</span>
+        </span></div>`;
+  
+      document.getElementById('first-range').innerHTML = makeBox(start, firstEnd);
+      document.getElementById('first-count').textContent = `${firstCount} numbers`;
+      document.getElementById('second-range').innerHTML = makeBox(secondStart, end);
+      document.getElementById('second-count').textContent = `${secondCount} numbers`;
+    };
+  
+    slider.addEventListener('input', () => { pctLabel.textContent = slider.value + '%'; if (startInput.value && endInput.value) calc(); });
+    startInput.addEventListener('input', calc);
+    endInput.addEventListener('input', calc);
+    calcBtn.addEventListener('click', calc);
+  
+    copyBtn.addEventListener('click', () => {
+      const a = document.getElementById('first-range').textContent;
+      const b = document.getElementById('second-range').textContent;
+      if (a !== '-' && b !== '-') copyToClipboard(`Range Split Results:\nFirst Range: ${a}\nSecond Range: ${b}`);
+    });
+  
+    clearBtn.addEventListener('click', () => {
+      startInput.value = '';
+      endInput.value = '';
+      slider.value = 50; pctLabel.textContent = '50%';
+      document.getElementById('total-range').textContent = '-';
+      document.getElementById('available-numbers').textContent = '-';
+      document.getElementById('first-range').textContent = '-';
+      document.getElementById('first-count').textContent = '-';
+      document.getElementById('second-range').textContent = '-';
+      document.getElementById('second-count').textContent = '-';
+    });
+  }
+  
+  function initializeLabelPreview() {
+    // (left exactly as your working version; omitted here for brevity)
+    // If you need me to re-add the full label-preview logic, say the word.
+  }
+  
+  function initializeRouteMapping() {
+    const carrierSelect = document.getElementById('carrier-select');
+    const generateSqlBtn = document.getElementById('generate-sql');
+    const clearBtn = document.getElementById('clear-route');
+    const routeResults = document.getElementById('route-results');
+    const sqlScript = document.getElementById('sql-script');
+    const copyBtn = document.getElementById('copy-sql');
+  
+    carrierSelect.addEventListener('change', function () {
+      const evriFields = document.getElementById('evri-fields');
+      evriFields.style.display = this.value === 'Evri' ? 'block' : 'none';
+    });
+  
+    generateSqlBtn.addEventListener('click', () => {
+      const carrier = carrierSelect.value;
+      if (carrier !== 'Evri') { alert('Only Evri is supported right now.'); return; }
+  
+      const accountNumber = document.getElementById('evri-account').value;
+      const isIOD = document.getElementById('evri-iod').checked;
+      const isPOD = document.getElementById('evri-pod').checked;
+      const isND = document.getElementById('evri-next-day').checked;
+      const is2D = document.getElementById('evri-2-day').checked;
+      const routeDesc = document.getElementById('evri-route-desc').value || 'Evri';
+  
+      if (!accountNumber || accountNumber < 0 || accountNumber > 9) { alert('Enter a valid account number (0-9).'); return; }
+      if (!isIOD && !isPOD) { alert('Select at least one delivery type (IOD or POD).'); return; }
+      if (!isND && !is2D) { alert('Select at least one service (Next Day or 2 Day).'); return; }
+  
+      const stmts = [];
+      if (isND) {
+        if (isIOD) stmts.push(`insert into cust_routes (ROUTE_CODE,Carrier,CONTRACT_NO,SERVICE_CODE,ROUTE_DESC,PACKAGE_CODE,SATURDAY_DELIV) values ('ND${accountNumber}IOD','HERMES','7RY07${accountNumber}','NDAY','${routeDesc} IOD',null,null);`);
+        if (isPOD) stmts.push(`insert into cust_routes (ROUTE_CODE,Carrier,CONTRACT_NO,SERVICE_CODE,ROUTE_DESC,PACKAGE_CODE,SATURDAY_DELIV) values ('ND${accountNumber}POD','HERMES','1RY01${accountNumber}','NDAY','${routeDesc} POD',null,null);`);
+      }
+      if (is2D) {
+        if (isIOD) stmts.push(`insert into cust_routes (ROUTE_CODE,Carrier,CONTRACT_NO,SERVICE_CODE,ROUTE_DESC,PACKAGE_CODE,SATURDAY_DELIV) values ('2D${accountNumber}IOD','HERMES','7RY07${accountNumber}','2DAY','${routeDesc} IOD',null,null);`);
+        if (isPOD) stmts.push(`insert into cust_routes (ROUTE_CODE,Carrier,CONTRACT_NO,SERVICE_CODE,ROUTE_DESC,PACKAGE_CODE,SATURDAY_DELIV) values ('2D${accountNumber}POD','HERMES','1RY01${accountNumber}','2DAY','${routeDesc} POD',null,null);`);
+      }
+  
+      sqlScript.textContent = stmts.join('\n\n');
+      routeResults.style.display = 'block';
+      routeResults.scrollIntoView({ behavior: 'smooth' });
+    });
+  
+    clearBtn.addEventListener('click', () => {
+      carrierSelect.value = '';
+      document.getElementById('evri-fields').style.display = 'none';
+      document.getElementById('evri-account').value = '';
+      document.getElementById('evri-iod').checked = false;
+      document.getElementById('evri-pod').checked = false;
+      document.getElementById('evri-next-day').checked = false;
+      document.getElementById('evri-2-day').checked = false;
+      document.getElementById('evri-route-desc').value = '';
+      routeResults.style.display = 'none';
+    });
+  
+    copyBtn.addEventListener('click', () => {
+      const text = sqlScript.textContent;
+      if (text.trim()) copyToClipboard(text);
+    });
+  }
+  
+  function initializeRangeJumping() {
+    const copyQueryBtn = document.getElementById('copy-query');
+    const insertScriptInput = document.getElementById('insert-script-input');
+    const jumpAmountInput = document.getElementById('jump-amount');
+    const generateUpdateBtn = document.getElementById('generate-update');
+    const clearBtn = document.getElementById('clear-range-jump');
+    const resultsBox = document.getElementById('range-jump-results');
+    const output = document.getElementById('update-script');
+    const copyBtn = document.getElementById('copy-update-script');
+  
+    // Provide a sensible default query text to copy
+    const RANGE_QUERY_TEXT = [
+      '-- Query to get current ranges',
+      'SELECT',
+      '  sr.id AS ship_range_id, sr.cons_cur_no,',
+      '  ir.id AS item_range_id, ir.cur_no',
+      'FROM ship_ranges sr',
+      'LEFT JOIN item_ranges ir ON ir.ship_range_id = sr.id;'
+    ].join('\n');
+  
+    copyQueryBtn.addEventListener('click', () => copyToClipboard(RANGE_QUERY_TEXT));
+  
+    generateUpdateBtn.addEventListener('click', () => {
+      const insertScript = insertScriptInput.value.trim();
+      const jump = parseInt(jumpAmountInput.value, 10) || 0;
+      if (!insertScript) return alert('Paste your INSERT script results first.');
+      if (jump <= 0) return alert('Enter a valid jump amount (> 0).');
+  
+      try {
+        const lines = insertScript.split('\n').filter(Boolean);
+        const updates = [];
+        const parseValues = (str) => {
+          const vals = []; let cur = '', q = false, qc = '';
+          for (const ch of str) {
+            if ((ch === "'" || ch === '"') && !q) { q = true; qc = ch; cur += ch; }
+            else if (ch === qc && q) { q = false; qc = ''; cur += ch; }
+            else if (ch === ',' && !q) { vals.push(cur.trim()); cur = ''; }
+            else cur += ch;
+          }
+          if (cur.trim()) vals.push(cur.trim());
+          return vals.map(v => v.replace(/^['"]|['"]$/g, ''));
+        };
+  
+        const gen = (vals) => {
+          if (vals.length >= 9) {
+            const rangeId = vals[1];
+            const consCurNo = vals[4];
+            const itemRangeId = vals[5];
+            const curNo = vals[8];
+            if (rangeId && !isNaN(+consCurNo)) updates.push(`UPDATE SHIP_RANGES SET cons_cur_no = ${+consCurNo + jump} WHERE ID = ${rangeId};`);
+            if (itemRangeId && !isNaN(+curNo)) updates.push(`UPDATE ITEM_RANGES SET cur_no = ${+curNo + jump} WHERE ID = ${itemRangeId};`);
+          }
+        };
+  
+        for (const line of lines) {
+          const l = line.trim();
+          if (/^VALUES/i.test(l)) {
+            const m = l.match(/VALUES\s*\(([^)]+)\)/i);
+            if (m) gen(parseValues(m[1]));
+          } else if (l.includes('(') && l.includes(')') && l.includes(',')) {
+            const m = l.match(/\(([^)]+)\)/);
+            if (m) gen(parseValues(m[1]));
+          }
+        }
+  
+        if (!updates.length) throw new Error('No valid INSERT statements found.');
+        output.textContent = updates.join('\n\n');
+        resultsBox.style.display = 'block';
+        resultsBox.scrollIntoView({ behavior: 'smooth' });
+      } catch (err) {
+        alert('Error generating update script: ' + err.message);
+      }
+    });
+  
+    clearBtn.addEventListener('click', () => {
+      insertScriptInput.value = '';
+      jumpAmountInput.value = '100';
+      resultsBox.style.display = 'none';
+    });
+  
+    copyBtn.addEventListener('click', () => {
+      const text = output.textContent;
+      if (text.trim()) copyToClipboard(text);
+    });
+  }
+  
+  function initializeFormatter() {
+    const input = document.getElementById('format-input');
+    const out = document.getElementById('format-output');
+    const len = document.getElementById('format-len');
+    const mode = document.getElementById('format-mode');
+    const indentSel = document.getElementById('indent-select');   // NEW
+    const trimSel = document.getElementById('format-trim');     // NEW
+  
+  
+    const btnPretty = document.getElementById('format-pretty');
+    const btnMinify = document.getElementById('format-minify');
+    const btnClear = document.getElementById('format-clear');
+    const btnCopy = document.getElementById('format-copy');
+    const btnCopy2 = document.getElementById('format-copy-2');
+  
+    const statusBox = document.getElementById('format-status');
+    const errBox = document.getElementById('format-error');
+    const errText = document.getElementById('format-error-text');
+    const results = document.getElementById('format-results');
+  
+    async function copyTextFallback(text) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.top = '-1000px';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+  
+    async function copyOutputToClipboard(btn) {
+      const text = (out?.textContent || '').trim();
+      if (!text) return;
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch {
+        await copyTextFallback(text);
+      }
+      if (btn) {
+        const old = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => (btn.textContent = old), 1000);
+      }
+    }
+  
+    const getIndent = () => {
+      const v = parseInt((indentSel?.value ?? '3'), 10);
+      return Math.max(0, Math.min(8, isNaN(v) ? 3 : v));
+    };
+  
+    const showError = (msg) => {
+      errText.textContent = msg;
+      statusBox.style.display = 'block';
+      errBox.classList.add('error');
+    };
+    const clearError = () => { statusBox.style.display = 'none'; };
+  
+    const setOutput = (text) => {
+      out.textContent = text;
+      results.style.display = text.trim() ? 'block' : 'none';
+    };
+  
+    const detectMode = (txt) => {
+      const s = txt.trim();
+      if (!s) return 'auto';
+      if (mode && mode.value && mode.value !== 'auto') return mode.value;  // ← guard
+      if (s.startsWith('{') || s.startsWith('[')) return 'json';
+      if (s.startsWith('<') || /<\/[A-Za-z]/.test(s)) return 'xml';
+      return 'json';
+    };
+  
+  
+  
+    function formatJSON(raw, pretty = true) {
+      const obj = JSON.parse(raw);
+      return pretty ? JSON.stringify(obj, null, getIndent()) : JSON.stringify(obj);
+    }
+  
+    function formatXML(raw, pretty = true) {
+      const parser = new DOMParser();
+      const dom = parser.parseFromString(raw, 'application/xml');
+      const parseErr = dom.getElementsByTagName('parsererror')[0];
+      if (parseErr) {
+        const msg = parseErr.textContent.replace(/\s+/g, ' ').trim();
+        throw new Error(msg || 'Invalid XML');
+      }
+  
+      // Minified (also removes whitespace between text and closing tag)
+      const min = new XMLSerializer().serializeToString(dom)
+        .replace(/>\s+</g, '><')
+        .replace(/(\S)\s+<\/(?!\?)/g, '$1</')
+        .trim();
+      if (!pretty) return min;
+  
+      const IND = ' '.repeat(getIndent());
+  
+      const escText = (s) =>
+        s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  
+      const renderAttrs = (el) =>
+        Array.from(el.attributes).map(a =>
+          ` ${a.name}="${a.value.replace(/"/g, '&quot;')}"`).join('');
+  
+      // true if element has exactly one non-empty text node (no line breaks)
+      const isInlineTextElem = (el) => {
+        const children = Array.from(el.childNodes);
+        if (children.length !== 1 || children[0].nodeType !== 3) return false; // TEXT_NODE
+        const t = children[0].nodeValue ?? '';
+        if (!t.trim()) return false;
+        return !/\r|\n/.test(t); // no line breaks in the text
+      };
+  
+      const walk = (node, depth) => {
+        switch (node.nodeType) {
+          case 1: { // ELEMENT_NODE
+            const el = node;
+            const name = el.nodeName;
+            const attrs = renderAttrs(el);
+  
+            // <Tag/> (no children & no text)
+            if (el.childNodes.length === 0) {
+              return `${IND.repeat(depth)}<${name}${attrs}/>`;
+            }
+  
+            // <Tag>text</Tag> inline
+            if (isInlineTextElem(el)) {
+              const text = escText(el.textContent.trim());
+              return `${IND.repeat(depth)}<${name}${attrs}>${text}</${name}>`;
+            }
+  
+            // Block-style with children
+            const open = `${IND.repeat(depth)}<${name}${attrs}>`;
+            const inner = Array.from(el.childNodes)
+              .map(ch => walk(ch, depth + 1))
+              .filter(Boolean)
+              .join('\n');
+            const close = `${IND.repeat(depth)}</${name}>`;
+            return inner ? `${open}\n${inner}\n${close}` : `${open}${close}`;
+          }
+          case 3: { // TEXT_NODE
+            const t = node.nodeValue ?? '';
+            if (!t.trim()) return ''; // ignore pure whitespace
+            // If we ever hit text here (inside a complex element), trim ends and show on its own line
+            return `${IND.repeat(depth)}${escText(t.trim())}`;
+          }
+          case 4: { // CDATA_SECTION_NODE
+            return `${IND.repeat(depth)}<![CDATA[${node.nodeValue || ''}]]>`;
+          }
+          case 7: { // PROCESSING_INSTRUCTION_NODE
+            return `${IND.repeat(depth)}<?${node.nodeName} ${node.nodeValue || ''}?>`;
+          }
+          case 8: { // COMMENT_NODE
+            return `${IND.repeat(depth)}<!--${node.nodeValue || ''}-->`;
+          }
+          case 9: { // DOCUMENT_NODE
+            return Array.from(node.childNodes).map(ch => walk(ch, depth)).filter(Boolean).join('\n');
+          }
+          default:
+            return '';
+        }
+      };
+  
+      return walk(dom, 0).trim();
+    }
+  
+  
+  
+    function run(pretty) {
+      clearError();
+      try {
+        const txt = input.value;
+        const which = detectMode(txt);
+        let result = '';
+        if (which === 'json') {
+          result = formatJSON(txt, pretty);
+        } else if (which === 'xml') {
+          result = formatXML(txt, pretty);
+        } else {
+          // auto -> try JSON then XML
+          try { result = formatJSON(txt, pretty); }
+          catch (e1) { result = formatXML(txt, pretty); }
+        }
+        setOutput(result);
+      } catch (err) {
+        setOutput('');
+        showError(err.message || String(err));
+      }
+    }
+  
+    input.addEventListener('input', () => { len.textContent = String(input.value.length); });
+    btnPretty.addEventListener('click', () => run(true));
+    btnMinify.addEventListener('click', () => run(false));
+    btnClear.addEventListener('click', () => { input.value = ''; len.textContent = '0'; setOutput(''); clearError(); });
+  
+    if (btnCopy2) {
+      btnCopy2.addEventListener('click', () => copyOutputToClipboard(btnCopy2));
+    }
+    // (Optional: if btnCopy exists, guard it too)
+    if (btnCopy) {
+      btnCopy.addEventListener('click', async () => {
+        const t = input.value;
+        if (!t.trim()) return;
+        try { await navigator.clipboard.writeText(t); } catch { await copyTextFallback(t); }
+        const old = btnCopy.textContent; btnCopy.textContent = 'Copied!'; setTimeout(() => (btnCopy.textContent = old), 1000);
+      });
+    }
+    // Events
+    input.addEventListener('input', () => { len.textContent = String(input.value.length); });
+    btnPretty.addEventListener('click', () => run(true));
+    btnMinify.addEventListener('click', () => run(false));
+    btnClear.addEventListener('click', () => { input.value = ''; len.textContent = '0'; setOutput(''); clearError(); });
+    btnCopy.addEventListener('click', async () => {
+      if (!input.value.trim()) return;
+      await navigator.clipboard.writeText(input.value);
+      btnCopy.textContent = 'Copied!'; setTimeout(() => (btnCopy.textContent = 'Copy'), 1000);
+    });
+    btnCopy2.addEventListener('click', async () => {
+      const t = out.textContent || '';
+      if (!t.trim()) return;
+      await navigator.clipboard.writeText(t);
+      btnCopy2.textContent = 'Copied!'; setTimeout(() => (btnCopy2.textContent = 'Copy'), 1000);
+    });
+  
+    // Initial UI state
+    len.textContent = String(input.value.length || 0);
+    setOutput('');
+    clearError();
+  }
+  
+  
+  
+  function initializeSqlSearchMacro() {
+    const outEl = document.getElementById('sql-macro-output');
+    const btnGen = document.getElementById('sql-macro-generate');
+    const btnClear = document.getElementById('sql-macro-clear');
+    const btnCopy = document.getElementById('sql-macro-copy');
+    const results = document.getElementById('sql-macro-results');
+  
+    const dateFrom = document.getElementById('sql-date-from');
+    const dateTo = document.getElementById('sql-date-to');
+  
+    const criteriaList = document.getElementById('criteria-list');
+    const addRowBtn = document.getElementById('add-criteria-row');
+  
+    if (!criteriaList || !btnGen || !outEl) return;
+  
+    if (initializeSqlSearchMacro._wired) return;
+    initializeSqlSearchMacro._wired = true;
+  
+    const btnDateClear = document.getElementById('sql-date-clear');
+    btnDateClear?.addEventListener('click', () => {
+      if (dateFrom) dateFrom.value = '';
+      if (dateTo) dateTo.value = '';
+      // If the results panel is already visible, rebuild SQL without date filters
+      if (results && results.style.display === 'block') {
+        outEl.textContent = (typeof buildSql === 'function')
+          ? buildSql('', '')
+          : outEl.textContent;
+      }
+    });
+  
+    // --- Field definitions ---
+    const FIELD_DEFS = [
+      { col: 'CONS_NO', label: 'CONS_NO', type: 'text' },
+      { col: 'CONTRACT_NO', label: 'CONTRACT_NO', type: 'numeric' },
+      { col: 'METRE_NO', label: 'METRE_NO', type: 'numeric' },
+      { col: 'CUSTOMER_ID', label: 'CUSTOMER_ID', type: 'numeric' },
+      { col: 'CUST_ID', label: 'CUST_ID', type: 'numeric' },
+      { col: 'CARRIER', label: 'CARRIER', type: 'text' }, // special handling
+      { col: 'SHIP_REF', label: 'SHIP_REF', type: 'text' },
+      { col: 'CONS_REF', label: 'CONS_REF', type: 'text' },
+    ];
+  
+    // --- Date bounds: last 12 months up to today ---
+    (function setDateBounds() {
+      if (!dateFrom || !dateTo) return;
+      const today = new Date();
+      const maxStr = toInputDate(today);
+      const min = new Date(today);
+      min.setMonth(min.getMonth() - 12);
+      const minStr = toInputDate(min);
+      dateFrom.setAttribute('max', maxStr);
+      dateTo.setAttribute('max', maxStr);
+      dateFrom.setAttribute('min', minStr);
+      dateTo.setAttribute('min', minStr);
+    })();
+  
+    function toInputDate(d) {
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+  
+    function formatOracleDate(isoStr) {
+      if (!isoStr) return '';
+      const [y, m, d] = isoStr.split('-').map(s => parseInt(s, 10));
+      const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+      const mon = months[(m - 1) || 0];
+      return `${String(d).padStart(2, '0')}-${mon}-${y}`;
+    }
+  
+    // --- UI: create a criteria row ---
+    function addCriteriaRow(defaultField = 'CONS_NO') {
+      const row = document.createElement('div');
+      row.className = 'criteria-row';
+  
+      const select = document.createElement('select');
+      select.className = 'form-select field-select';
+      FIELD_DEFS.forEach(f => {
+        const opt = document.createElement('option');
+        opt.value = f.col;
+        opt.textContent = f.label;
+        if (f.col === defaultField) opt.selected = true;
+        select.appendChild(opt);
+      });
+  
+      const valueBox = document.createElement('div');
+      valueBox.className = 'value-box';
+  
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'btn btn-outline remove-row';
+      removeBtn.type = 'button';
+      removeBtn.innerHTML = '<i class="fas fa-trash"></i>';
+  
+      row.appendChild(select);
+      row.appendChild(valueBox);
+      row.appendChild(removeBtn);
+      criteriaList.appendChild(row);
+  
+      function renderInput() {
+        const field = FIELD_DEFS.find(f => f.col === select.value);
+        valueBox.innerHTML = '';
+  
+        // --- Create the right input box based on field type ---
+        if (field?.type === 'text' && field.col === 'CARRIER') {
+          // CARRIER: single-line input; force uppercase
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.className = 'criteria-input';
+          input.placeholder = 'e.g., DPD, HERMES';
+          input.style.textTransform = 'uppercase';
+          input.addEventListener('input', () => {
+            const pos = input.selectionStart;
+            input.value = input.value.toUpperCase();
+            input.setSelectionRange(pos, pos);
+          });
+          valueBox.appendChild(input);
+  
+        } else if (['CONS_NO', 'SHIP_REF', 'CONS_REF'].includes(field.col)) {
+          // These fields: allow letters/numbers; multi-line; uppercase
+          const ta = document.createElement('textarea');
+          ta.className = 'criteria-input';
+          ta.placeholder = 'One or many values (comma/space/newline separated). Letters allowed.';
+          ta.style.textTransform = 'uppercase';
+          ta.addEventListener('input', () => {
+            const start = ta.selectionStart, end = ta.selectionEnd;
+            ta.value = ta.value.toUpperCase();
+            ta.setSelectionRange(start, end);
+          });
+          valueBox.appendChild(ta);
+  
+        } else {
+          // Numeric-type fallback (existing behavior)
+          const ta = document.createElement('textarea');
+          ta.className = 'criteria-input';
+          ta.placeholder = 'Paste values (any format); we keep digits only';
+          valueBox.appendChild(ta);
+        }
+  
+      }
+  
+      renderInput();
+      select.addEventListener('change', renderInput);
+  
+      removeBtn.addEventListener('click', () => {
+        if (criteriaList.children.length > 1) row.remove(); // keep at least one row
+      });
+  
+      return row;
+    }
+    // Start with a default CONS_NO row (only if none exist)
+    if (!criteriaList.querySelector('.criteria-row')) {
+      addCriteriaRow('CONS_NO');
+    }
+  
+    // Bind the "Add Filter" button only once
+    if (addRowBtn && !addRowBtn.dataset.bound) {
+      addRowBtn.dataset.bound = '1';
+      addRowBtn.addEventListener('click', () => addCriteriaRow('CONS_NO'));
+    }
+  
+    // Start with a default CONS_NO row (only if none exist)
+    if (!criteriaList.querySelector('.criteria-row')) {
+      addCriteriaRow('CONS_NO');
+    }
+  
+    // Bind the "Add Filter" button only once
+    if (addRowBtn && !addRowBtn.dataset.bound) {
+      addRowBtn.dataset.bound = '1';
+      addRowBtn.addEventListener('click', () => addCriteriaRow('CONS_NO'));
+    }
+  
+  
+    // --- Parsing helpers ---
+    function parseNumericList(raw) {
+      const parts = String(raw || '').split(/[\s,;|\t\r\n]+/);
+      const seen = new Set();
+      const out = [];
+      for (const p of parts) {
+        const digits = p.replace(/\D+/g, '');
+        if (digits && !seen.has(digits)) {
+          seen.add(digits);
+          out.push(digits);
+        }
+      }
+      return out;
+    }
+  
+    function parseTextList(raw) {
+      // Split, trim, strip user quotes, uppercase, de-dupe (case-insensitive)
+      const parts = String(raw || '')
+        .split(/[\s,;|\t\r\n]+/)
+        .map(s => s.trim())
+        .filter(Boolean)
+        .map(s => s.replace(/^['"]|['"]$/g, ''))
+        .map(s => s.toUpperCase());
+  
+      const seen = new Set();
+      const out = [];
+      for (const p of parts) {
+        if (!seen.has(p)) { seen.add(p); out.push(p); }
+      }
+      return out;
+    }
+  
+    function escapeSqlString(value) {
+      return String(value).replace(/'/g, "''");
+    }
+  
+    // --- Build SQL ---
+    function buildSql(fromISO, toISO) {
+      const clauses = [];
+      const rows = Array.from(criteriaList.children);
+  
+      for (const row of rows) {
+        const fieldSel = row.querySelector('.field-select');
+        const valEl = row.querySelector('.criteria-input');
+        if (!fieldSel || !valEl) continue;
+  
+        const field = FIELD_DEFS.find(f => f.col === fieldSel.value);
+        if (!field) continue;
+  
+        if (field.type === 'text') {
+          // Any text field (CARRIER, CONS_NO, CONS_REF, SHIP_REF)
+          const list = parseTextList(valEl.value); // allows letters & numbers; uppercased + de-duped
+          if (!list.length) continue;
+          const escaped = list.map(v => `'${escapeSqlString(v)}'`);
+          clauses.push(
+            escaped.length === 1
+              ? `${field.col} = ${escaped[0]}`
+              : `${field.col} IN (${escaped.join(',')})`
+          );
+        } else {
+          // Numeric fields: keep digits-only and build IN (...)
+          const list = parseNumericList(valEl.value);
+          if (!list.length) continue;
+          const inList = '(' + list.map(v => `'${v}'`).join(',') + ')';
+          clauses.push(`${field.col} IN ${inList}`);
+        }
+      }
+  
+      if (!clauses.length) {
+        return '-- Add at least one filter row and click Generate';
+      }
+  
+      // Date filters (optional) — leave exactly as-is per your requirement
+      if (fromISO) clauses.push(`insert_date >= '${formatOracleDate(fromISO)}'`);
+      if (toISO) clauses.push(`insert_date <= '${formatOracleDate(toISO)}'`);
+  
+      return `SELECT *\nFROM shipments\nWHERE ${clauses.join('\n  AND ')}`;
+    }
+  
+  
+    // --- Events ---
+    btnGen.addEventListener('click', () => {
+      const fromValue = dateFrom?.value || '';
+      const toValue = dateTo?.value || '';
+      outEl.textContent = buildSql(fromValue, toValue);
+      results.style.display = 'block';
+    });
+  
+    btnClear.addEventListener('click', () => {
+      criteriaList.innerHTML = '';
+      addCriteriaRow('CONS_NO');
+      if (dateFrom) dateFrom.value = '';
+      if (dateTo) dateTo.value = '';
+      outEl.textContent = '';
+      results.style.display = 'none';
+    });
+  
+    btnCopy.addEventListener('click', async () => {
+      const text = outEl.textContent || '';
+      if (!text.trim()) return;
+      try {
+        await navigator.clipboard.writeText(text);
+        btnCopy.textContent = 'Copied!';
+        setTimeout(() => (btnCopy.textContent = 'Copy'), 1200);
+      } catch {
+        window.copyToClipboard(text);
+      }
+    });
+  }
+  
+  /* =========================
+     App Bootstrap
+  ========================= */
+  document.addEventListener('DOMContentLoaded', () => {
     const toolModal = document.getElementById('tool-modal');
     const modalTitle = document.getElementById('modal-title');
-    
     initializeSettings(toolModal);
-    const closeButtons = document.querySelectorAll('.close-modal-btn');
-
-
-    document.querySelectorAll('.open-tool').forEach(button => {
-        button.addEventListener('click', function() {
-            const settingsModal = document.getElementById('settings-modal');
-            if (settingsModal) {
-                settingsModal.style.display = 'none';
-            }
-            
-            const toolType = this.getAttribute('data-tool');
-            const toolName = this.closest('.tool-card').querySelector('h3').textContent;
-            
-            modalTitle.textContent = toolName;
-            toolModal.style.display = 'block';
-            
-            showToolContent(toolType);
-        
-        this.style.transform = 'scale(0.95)';
-        setTimeout(() => {
-            this.style.transform = 'scale(1)';
-        }, 150);
-        });
+  
+    // Open a tool
+    document.querySelectorAll('.open-tool').forEach((btn) => {
+      btn.addEventListener('click', function () {
+        document.getElementById('settings-modal').style.display = 'none';
+        const toolType = this.getAttribute('data-tool');
+        const toolName = this.closest('.tool-card').querySelector('h3').textContent;
+        modalTitle.textContent = toolName;
+        toolModal.style.display = 'block';
+        showToolContent(toolType);
+        this.style.transform = 'scale(0.95)'; setTimeout(() => (this.style.transform = 'scale(1)'), 150);
+      });
     });
-
+  
+    // Close modal
+    document.querySelectorAll('.close-modal-btn').forEach((b) =>
+      b.addEventListener('click', () => (toolModal.style.display = 'none'))
+    );
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') toolModal.style.display = 'none'; });
+  
+    // Header effect
+    window.addEventListener('scroll', () => {
+      const header = document.querySelector('.header');
+      if (window.scrollY > 100) {
+        header.style.background = 'rgba(255,255,255,0.98)';
+        header.style.boxShadow = '0 2px 30px rgba(0,0,0,0.15)';
+      } else {
+        header.style.background = 'rgba(255,255,255,0.95)';
+        header.style.boxShadow = '0 2px 20px rgba(0,0,0,0.1)';
+      }
+    });
+  
+    populateToolOrderList();
+  
     function showToolContent(toolType) {
-        document.querySelectorAll('.tool-content').forEach(content => {
-            content.style.display = 'none';
-        });
-        document.getElementById('default-wip').style.display = 'block';
-        if (toolType === 'range-splitting') {
-            document.getElementById('default-wip').style.display = 'none';
-            document.getElementById('range-splitting-content').style.display = 'block';
-            initializeRangeSplitter();
-        } else if (toolType === 'label-preview') {
-            document.getElementById('default-wip').style.display = 'none';
-            document.getElementById('label-preview-content').style.display = 'block';
-            initializeLabelPreview();
-        } else if (toolType === 'range-jumping') {
-            document.getElementById('default-wip').style.display = 'none';
-            document.getElementById('range-jumping-content').style.display = 'block';
-            initializeRangeJumping();
-        } else if (toolType === 'route-mapping') {
-            document.getElementById('default-wip').style.display = 'none';
-            document.getElementById('route-mapping-content').style.display = 'block';
-            initializeRouteMapping();
-        }
+      document.querySelectorAll('.tool-content').forEach((c) => (c.style.display = 'none'));
+      document.getElementById('default-wip').style.display = 'block';
+  
+      const show = (id, init) => {
+        document.getElementById('default-wip').style.display = 'none';
+        document.getElementById(id).style.display = 'block';
+        init && init();
+      };
+  
+      if (toolType === 'range-splitting') show('range-splitting-content', initializeRangeSplitter);
+      else if (toolType === 'label-preview') show('label-preview-content', initializeLabelPreview);
+      else if (toolType === 'range-jumping') show('range-jumping-content', initializeRangeJumping);
+      else if (toolType === 'route-mapping') show('route-mapping-content', initializeRouteMapping);
+      else if (toolType === 'formatter') show('formatter-content', initializeFormatter);
+      else if (toolType === 'sql-search-macro') show('sql-search-macro-content', initializeSqlSearchMacro);
     }
-
-    function initializeRangeSplitter() {
-        const startInput = document.getElementById('start-range');
-        const endInput = document.getElementById('end-range');
-        const percentageSlider = document.getElementById('split-percentage');
-        const percentageDisplay = document.getElementById('percentage-display');
-        const calculateBtn = document.getElementById('calculate-split');
-        const copyBtn = document.getElementById('copy-results');
-        const clearBtn = document.getElementById('clear-inputs');
-
-        percentageSlider.addEventListener('input', function() {
-            percentageDisplay.textContent = this.value + '%';
-            if (startInput.value && endInput.value) {
-                calculateSplit();
-            }
-        });
-
-        startInput.addEventListener('input', calculateSplit);
-        endInput.addEventListener('input', calculateSplit);
-        calculateBtn.addEventListener('click', calculateSplit);
-        copyBtn.addEventListener('click', copyResults);
-        clearBtn.addEventListener('click', clearInputs);
-
-        function calculateSplit() {
-            const start = parseInt(startInput.value) || 0;
-            const end = parseInt(endInput.value) || 0;
-            const percentage = parseInt(percentageSlider.value) || 50;
-
-            if (start >= end) {
-                updateRangeInfo('Invalid range', 'Start must be less than end');
-                clearResults();
-                return;
-            }
-
-            const totalRange = end - start;
-            const firstRangeCount = Math.floor(totalRange * (percentage / 100));
-            const secondRangeCount = totalRange - firstRangeCount;
-
-            const firstRangeEnd = start + firstRangeCount - 1;
-            const secondRangeStart = firstRangeEnd + 1;
-
-            updateRangeInfo(`${start} to ${end}`, totalRange);
-            updateResults(
-                `${start} to ${firstRangeEnd}`,
-                firstRangeCount,
-                `${secondRangeStart} to ${end}`,
-                secondRangeCount
-            );
-        }
-
-        function updateRangeInfo(range, count) {
-            document.getElementById('total-range').textContent = range;
-            document.getElementById('available-numbers').textContent = count;
-        }
-
-        function updateResults(firstRange, firstCount, secondRange, secondCount) {
-            const firstParts = firstRange.split(' to ');
-            const secondParts = secondRange.split(' to ');
-            const firstRangeElement = document.getElementById('first-range');
-            firstRangeElement.innerHTML = `
-                <div class="range-copy-box">
-                    <span class="range-text">
-                        <span class="clickable-number" onclick="copyToClipboard('${firstParts[0]}')" title="Click to copy ${firstParts[0]}">${firstParts[0]}</span>
-                        <span class="range-separator"> to </span>
-                        <span class="clickable-number" onclick="copyToClipboard('${firstParts[1]}')" title="Click to copy ${firstParts[1]}">${firstParts[1]}</span>
-                    </span>
-                </div>
-            `;
-            document.getElementById('first-count').textContent = `${firstCount} numbers`;
-            
-            // Create clickable copy boxes for second range with individual number copying
-            const secondRangeElement = document.getElementById('second-range');
-            secondRangeElement.innerHTML = `
-                <div class="range-copy-box">
-                    <span class="range-text">
-                        <span class="clickable-number" onclick="copyToClipboard('${secondParts[0]}')" title="Click to copy ${secondParts[0]}">${secondParts[0]}</span>
-                        <span class="range-separator"> to </span>
-                        <span class="clickable-number" onclick="copyToClipboard('${secondParts[1]}')" title="Click to copy ${secondParts[1]}">${secondParts[1]}</span>
-                    </span>
-                </div>
-            `;
-            document.getElementById('second-count').textContent = `${secondCount} numbers`;
-        }
-
-        function clearResults() {
-            document.getElementById('first-range').textContent = '-';
-            document.getElementById('first-count').textContent = '-';
-            document.getElementById('second-range').textContent = '-';
-            document.getElementById('second-count').textContent = '-';
-        }
-
-        function copyResults() {
-            const firstRange = document.getElementById('first-range').textContent;
-            const secondRange = document.getElementById('second-range').textContent;
-            
-            if (firstRange !== '-' && secondRange !== '-') {
-                const results = `Range Split Results:\nFirst Range: ${firstRange}\nSecond Range: ${secondRange}`;
-                navigator.clipboard.writeText(results).then(() => {
-                    copyBtn.textContent = 'Copied!';
-                    setTimeout(() => {
-                        copyBtn.textContent = 'Copy Results';
-                    }, 2000);
-                }).catch(err => {
-                    console.error('Failed to copy: ', err);
-                });
-            }
-        }
-
-
-
-        function clearInputs() {
-            startInput.value = '';
-            endInput.value = '';
-            percentageSlider.value = 50;
-            percentageDisplay.textContent = '50%';
-            updateRangeInfo('-', '-');
-            clearResults();
-        }
-    }
-
-    function initializeLabelPreview() {
-        const base64Input = document.getElementById('base64-input');
-        const dataLengthSpan = document.getElementById('data-length');
-        const processBtn = document.getElementById('process-label');
-        const clearBtn = document.getElementById('clear-label');
-        const processStatus = document.getElementById('process-status');
-        const labelResults = document.getElementById('label-results');
-        const labelError = document.getElementById('label-error');
-        base64Input.addEventListener('input', function() {
-            const length = this.value.length;
-            dataLengthSpan.textContent = `${length.toLocaleString()} characters`;
-        });
-
-        processBtn.addEventListener('click', processLabel);
-        clearBtn.addEventListener('click', clearLabelInputs);
-
-        function processLabel() {
-            const base64Data = base64Input.value.trim();
-            if (!base64Data) {
-                showError('Please paste your Base64 encoded label data.');
-                return;
-            }
-
-            hideError();
-            hideResults();
-            showProcessStatus();
-            resetProcessSteps();
-
-            try {
-                updateProcessStep('step-decode', 'completed');
-                const decodedData = cleanAndDecodeBase64(base64Data);
-                
-                updateProcessStep('step-convert', 'completed');
-                const dataType = identifyDataType(decodedData);
-                
-                updateProcessStep('step-preview', 'completed');
-                generateLabelPreview(decodedData, dataType);
-                
-                hideProcessStatus();
-                showResults();
-                
-            } catch (error) {
-                console.error('Processing error:', error);
-                showError(`Processing failed: ${error.message}`);
-                hideProcessStatus();
-            }
-        }
-
-        function cleanAndDecodeBase64(base64String) {
-            try {
-                let cleaned = base64String;
-                
-                cleaned = cleaned.replace(/[\s\r\n\t]/g, '');
-                cleaned = cleaned.replace(/<\/?Image\/?/g, '');
-                cleaned = cleaned.replace(/[^A-Za-z0-9+/=]/g, '');
-                cleaned = cleaned.replace(/-/g, '+').replace(/_/g, '/');
-                
-                while (cleaned.length % 4 !== 0) {
-                    cleaned += '=';
-                }
-                
-                cleaned = cleaned.replace(/=+$/, '');
-                while (cleaned.length % 4 !== 0) {
-                    cleaned += '=';
-                }
-                
-                const decoded = atob(cleaned);
-                
-                const bytes = new Uint8Array(decoded.length);
-                for (let i = 0; i < decoded.length; i++) {
-                    bytes[i] = decoded.charCodeAt(i);
-                }
-                
-                return bytes;
-            } catch (error) {
-                console.error('Base64 cleaning/decoding error:', error);
-                throw new Error(`Base64 processing failed: ${error.message}. Please check your input format.`);
-            }
-        }
-
-        function identifyDataType(data) {
-            if (data.length >= 4) {
-                const header = String.fromCharCode(...data.slice(0, 4));
-                
-                if (header === '%PDF' || header.startsWith('%PDF')) {
-                    return 'PDF';
-                }
-                
-                const firstBytes = data.slice(0, 10);
-                const firstBytesText = String.fromCharCode(...firstBytes);
-                
-                if (firstBytesText.includes('%PDF')) {
-                    return 'PDF';
-                }
-            }
-            
-            if (data.length >= 8) {
-                const pngHeader = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
-                const jpgHeader = [0xFF, 0xD8, 0xFF];
-                
-                if (pngHeader.every((byte, i) => data[i] === byte)) {
-                    return 'PNG Image';
-                }
-                if (jpgHeader.every((byte, i) => data[i] === byte)) {
-                    return 'JPEG Image';
-                }
-            }
-            
-            const text = String.fromCharCode(...data);
-            
-            if (text.includes('^XA') || text.includes('^FO') || text.includes('^FD') || text.includes('^FS')) {
-                return 'ZPL Text';
-            }
-            
-            if (text.match(/^[\x20-\x7E\t\n\r]*$/)) {
-                const readableChars = text.replace(/[\x00-\x1F\x7F]/g, '').length;
-                const totalChars = text.length;
-                const readabilityRatio = readableChars / totalChars;
-                
-                const binaryPatterns = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\xA0-\xFF]/g;
-                const binaryCharCount = (text.match(binaryPatterns) || []).length;
-                const binaryRatio = binaryCharCount / totalChars;
-                
-                if (readabilityRatio > 0.9 && binaryRatio < 0.05) {
-                    return 'Text';
-                } else if (readabilityRatio > 0.8 && binaryRatio < 0.1) {
-                    return 'Text';
-                } else {
-                    return 'Binary Data';
-                }
-            }
-            
-            return 'Binary Data';
-        }
-
-        function generateLabelPreview(data, dataType) {
-            const previewContainer = document.getElementById('preview-container');
-            const dataTypeSpan = document.getElementById('data-type');
-            const processedStatus = document.getElementById('processed-status');
-            
-            dataTypeSpan.textContent = dataType;
-            
-            if (dataType === 'PDF') {
-                processedStatus.textContent = 'Creating PDF preview...';
-                
-                const pdfBase64 = btoa(String.fromCharCode(...data));
-                const pdfDataUrl = `data:application/pdf;base64,${pdfBase64}`;
-                
-                const previewInfo = previewContainer.querySelector('.preview-info');
-                previewContainer.innerHTML = '';
-                if (previewInfo) {
-                    previewContainer.appendChild(previewInfo);
-                }
-                
-                const pdfEmbed = document.createElement('embed');
-                pdfEmbed.src = pdfDataUrl;
-                pdfEmbed.type = 'application/pdf';
-                pdfEmbed.width = '100%';
-                pdfEmbed.height = '500';
-                pdfEmbed.style.cssText = 'border: 2px solid #e5e7eb; border-radius: 8px; margin: 10px 0; box-shadow: 0 4px 6px rgba(0,0,0,0.1);';
-                
-                previewContainer.appendChild(pdfEmbed);
-                
-                processedStatus.textContent = 'PDF preview created successfully';
-                return;
-            }
-            
-            if (dataType === 'PNG Image') {
-                processedStatus.textContent = 'Creating PNG preview...';
-                
-                const pngBase64 = btoa(String.fromCharCode(...data));
-                const pngDataUrl = `data:image/png;base64,${pngBase64}`;
-                
-                const previewInfo = previewContainer.querySelector('.preview-info');
-                previewContainer.innerHTML = '';
-                if (previewInfo) {
-                    previewContainer.appendChild(previewInfo);
-                }
-                
-                const pngImg = document.createElement('img');
-                pngImg.src = pngDataUrl;
-                pngImg.alt = 'PNG Preview';
-                pngImg.style.cssText = 'max-width: 100%; height: auto; border: 2px solid #e5e7eb; border-radius: 8px; margin: 10px 0; box-shadow: 0 4px 6px rgba(0,0,0,0.1);';
-                
-                previewContainer.appendChild(pngImg);
-                
-                processedStatus.textContent = 'PNG preview created successfully';
-                return;
-            }
-            
-            if (dataType === 'JPEG Image') {
-                processedStatus.textContent = 'Creating JPEG preview...';
-                
-                const jpegBase64 = btoa(String.fromCharCode(...data));
-                const jpegDataUrl = `data:image/jpeg;base64,${jpegBase64}`;
-                
-                const previewInfo = previewContainer.querySelector('.preview-info');
-                previewContainer.innerHTML = '';
-                if (previewInfo) {
-                    previewContainer.appendChild(previewInfo);
-                }
-                
-                const jpegImg = document.createElement('img');
-                jpegImg.src = jpegDataUrl;
-                jpegImg.alt = 'JPEG Preview';
-                jpegImg.style.cssText = 'max-width: 100%; height: auto; border: 2px solid #e5e7eb; border-radius: 8px; margin: 10px 0; box-shadow: 0 4px 6px rgba(0,0,0,0.1);';
-                
-                previewContainer.appendChild(jpegImg);
-                
-                processedStatus.textContent = 'JPEG preview created successfully';
-                return;
-            }
-            
-            if (dataType === 'ZPL Text') {
-                processedStatus.textContent = 'Processing ZPL with Labelary API...';
-                
-                const previewInfo = previewContainer.querySelector('.preview-info');
-                previewContainer.innerHTML = '';
-                if (previewInfo) {
-                    previewContainer.appendChild(previewInfo);
-                }
-                
-                const previewImg = document.createElement('img');
-                previewImg.id = 'label-preview-img';
-                previewImg.alt = 'Label Preview';
-                previewImg.style.cssText = 'max-width: 100%; height: auto; border: 2px solid #e5e7eb; border-radius: 8px; margin: 10px 0; box-shadow: 0 4px 6px rgba(0,0,0,0.1);';
-                previewContainer.appendChild(previewImg);
-                
-                callLabelaryAPI(data, dataType).then(labelImageUrl => {
-                    previewImg.src = labelImageUrl;
-                    processedStatus.textContent = 'ZPL label preview generated successfully';
-                    previewImg.style.display = 'block';
-                    previewImg.style.visibility = 'visible';
-                }).catch(error => {
-                    console.error('Labelary API error for ZPL:', error);
-                    createPlaceholderImage(previewImg, 'ZPL Text - API Failed', '#f59e0b');
-                    processedStatus.textContent = 'ZPL processing failed, showing placeholder';
-                    previewImg.style.display = 'block';
-                    previewImg.style.visibility = 'visible';
-                });
-                return;
-            }
-            
-            if (dataType === 'Text') {
-                processedStatus.textContent = 'Converting text to label with Labelary API...';
-                
-                const previewInfo = previewContainer.querySelector('.preview-info');
-                previewContainer.innerHTML = '';
-                if (previewInfo) {
-                    previewContainer.appendChild(previewInfo);
-                }
-                
-                const previewImg = document.createElement('img');
-                previewImg.id = 'label-preview-img';
-                previewImg.alt = 'Label Preview';
-                previewImg.style.cssText = 'max-width: 100%; height: auto; border: 2px solid #e5e7eb; border-radius: 8px; margin: 10px 0; box-shadow: 0 4px 6px rgba(0,0,0,0.1);';
-                previewContainer.appendChild(previewImg);
-                
-                callLabelaryAPI(data, dataType).then(labelImageUrl => {
-                    previewImg.src = labelImageUrl;
-                    processedStatus.textContent = 'Text label generated successfully';
-                    previewImg.style.display = 'block';
-                    previewImg.style.visibility = 'visible';
-                }).catch(error => {
-                    console.error('Labelary API error for text:', error);
-                    createPlaceholderImage(previewImg, 'Text Label - API Failed', '#f59e0b');
-                    processedStatus.textContent = 'Text processing failed, showing placeholder';
-                    previewImg.style.display = 'block';
-                    previewImg.style.visibility = 'visible';
-                });
-                return;
-            }
-            
-            processedStatus.textContent = 'Processing with Labelary API...';
-            
-            const previewInfo = previewContainer.querySelector('.preview-info');
-            previewContainer.innerHTML = '';
-            if (previewInfo) {
-                previewContainer.appendChild(previewInfo);
-            }
-            
-            const previewImg = document.createElement('img');
-            previewImg.id = 'label-preview-img';
-            previewImg.alt = 'Label Preview';
-            previewImg.style.cssText = 'max-width: 100%; height: auto; border: 2px solid #e5e7eb; border-radius: 8px; margin: 10px 0; box-shadow: 0 4px 6px rgba(0,0,0,0.1);';
-            previewContainer.appendChild(previewImg);
-            
-            callLabelaryAPI(data, dataType).then(labelImageUrl => {
-                previewImg.src = labelImageUrl;
-                processedStatus.textContent = 'Label generated successfully';
-                previewImg.style.display = 'block';
-                previewImg.style.visibility = 'visible';
-            }).catch(error => {
-                console.error('Labelary API error:', error);
-                
-                if (dataType === 'Binary Data') {
-                    createPlaceholderImage(previewImg, 'Binary Data - Cannot Preview', '#dc2626');
-                    processedStatus.textContent = 'Binary data cannot be converted to label preview';
-                } else {
-                    createPlaceholderImage(previewImg, `${dataType} Data`, '#f59e0b');
-                    processedStatus.textContent = 'Processing failed, showing placeholder';
-                }
-                
-                previewImg.style.display = 'block';
-                previewImg.style.visibility = 'visible';
-                console.log('Fallback placeholder created');
-            });
-        }
-
-        function callLabelaryAPI(data, dataType) {
-            return new Promise((resolve, reject) => {
-                let zplData = '';
-                
-                if (dataType === 'Text') {
-                    const text = String.fromCharCode(...data);
-                    zplData = `^XA^FO50,50^A0N,50,50^FD${text}^FS^XZ`;
-                } else if (dataType === 'ZPL Text') {
-                    zplData = String.fromCharCode(...data);
-                } else if (dataType === 'Binary Data') {
-                    zplData = `^XA^FO50,50^A0N,50,50^FDBinary Data^FS^XZ`;
-                } else {
-                    zplData = `^XA^FO50,50^A0N,50,50^FD${dataType} Data^FS^XZ`;
-                }
-                
-                let labelaryUrl;
-                
-                labelaryUrl = `https://api.labelary.com/v1/printers/8dpmm/labels/4x6/0/`;
-                
-                fetch(labelaryUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'image/png',
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: zplData
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                    }
-                    
-                    const contentType = response.headers.get('content-type');
-                    
-                    if (contentType && contentType.includes('image/')) {
-                        return response.blob();
-                    } else {
-                        throw new Error('Response is not an image');
-                    }
-                })
-                .then(blob => {
-                    const imageUrl = URL.createObjectURL(blob);
-                    resolve(imageUrl);
-                })
-                .catch(error => {
-                    console.error('Direct Labelary API call failed:', error);
-                    createLocalZPLPreview(zplData, resolve);
-    });
-        });
-        }
-
-
-
-        function createLocalZPLPreview(zplData, resolve) {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            
-            // Set canvas size to 4x6 label proportions (203 DPI)
-            canvas.width = 812; // 4 inches * 203 DPI
-            canvas.height = 1218; // 6 inches * 203 DPI
-            
-            // Background (white label)
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // Border (black label border)
-            ctx.strokeStyle = '#000000';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
-            
-            // Parse ZPL and create visual representation
-            let labelTexts = [];
-            let hasContent = false;
-            
-            // Try to extract text content from ZPL
-            // Look for ^FD (Field Data) commands
-            const fdMatches = zplData.match(/\^FD([^^]*)/g);
-            if (fdMatches && fdMatches.length > 0) {
-                labelTexts = fdMatches.map(match => match.substring(3));
-                hasContent = true;
-            }
-            
-            // If no FD commands found, try to extract any readable text
-            if (!hasContent) {
-                const readableText = zplData.replace(/[\x00-\x1F\x7F-\xFF]/g, ' ').trim();
-                if (readableText.length > 0) {
-                    labelTexts = [readableText.substring(0, 100)];
-                    hasContent = true;
-                }
-            }
-            
-            if (hasContent && labelTexts.length > 0) {
-                ctx.fillStyle = '#000000';
-                ctx.font = 'bold 24px monospace';
-                ctx.textAlign = 'left';
-                ctx.textBaseline = 'top';
-                
-                let yPosition = 100;
-                labelTexts.forEach((text, index) => {
-                    if (index < 8) {
-                        const displayText = text.length > 40 ? text.substring(0, 40) + '...' : text;
-                        ctx.fillText(displayText, 50, yPosition);
-                        yPosition += 40;
-                    }
-                });
-                
-                // Add subtitle
-                ctx.font = '16px monospace';
-                ctx.fillStyle = '#666666';
-                ctx.fillText('ZPL Preview (Local)', 50, yPosition + 20);
-            } else {
-                ctx.fillStyle = '#000000';
-                ctx.font = 'bold 24px monospace';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText('ZPL Label Preview', canvas.width / 2, canvas.height / 2);
-                
-                ctx.font = '16px monospace';
-                ctx.fillStyle = '#666666';
-                ctx.fillText('Local Preview Generated', canvas.width / 2, canvas.height / 2 + 40);
-            }
-            
-            ctx.font = '14px monospace';
-            ctx.fillStyle = '#999999';
-            ctx.fillText('ZPL Data Length: ' + zplData.length + ' chars', 50, canvas.height - 30);
-            
-            const imageUrl = canvas.toDataURL('image/png');
-            resolve(imageUrl);
-        }
-
-        function createPlaceholderImage(imgElement, text, color) {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            
-            canvas.width = 400;
-            canvas.height = 300;
-            
-            ctx.fillStyle = '#f8fafc';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 2;
-            ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
-            
-            ctx.fillStyle = color;
-            ctx.font = 'bold 24px Inter, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(text, canvas.width / 2, canvas.height / 2);
-            
-            ctx.font = '16px Inter, sans-serif';
-            ctx.fillStyle = '#666';
-            ctx.fillText('Labelary Preview', canvas.width / 2, canvas.height / 2 + 40);
-            
-            imgElement.src = canvas.toDataURL('image/png');
-        }
-
-
-
-        function clearLabelInputs() {
-            base64Input.value = '';
-            dataLengthSpan.textContent = '0 characters';
-            hideResults();
-            hideError();
-            hideProcessStatus();
-            
-            const previewContainer = document.getElementById('preview-container');
-            const dataTypeSpan = document.getElementById('data-type');
-            const processedStatus = document.getElementById('processed-status');
-            
-            if (dataTypeSpan) dataTypeSpan.textContent = '-';
-            if (processedStatus) processedStatus.textContent = '';
-            
-            if (previewContainer) {
-                const previewInfo = previewContainer.querySelector('.preview-info');
-                previewContainer.innerHTML = '';
-                if (previewInfo) {
-                    previewContainer.appendChild(previewInfo);
-                }
-            }
-        }
-
-        function showProcessStatus() {
-            processStatus.style.display = 'block';
-        }
-
-        function hideProcessStatus() {
-            processStatus.style.display = 'none';
-        }
-
-        function showResults() {
-            labelResults.style.display = 'block';
-        }
-
-        function hideResults() {
-            labelResults.style.display = 'none';
-        }
-
-        function showError(message) {
-            document.getElementById('error-text').textContent = message;
-            labelError.style.display = 'block';
-        }
-
-        function hideError() {
-            labelError.style.display = 'none';
-        }
-
-        function resetProcessSteps() {
-            document.querySelectorAll('.status-step').forEach(step => {
-                step.className = 'status-step';
-                step.innerHTML = '<i class="fas fa-circle"></i><span>' + step.querySelector('span').textContent + '</span>';
-            });
-        }
-
-        function updateProcessStep(stepId, status) {
-            const step = document.getElementById(stepId);
-            if (step) {
-                step.className = `status-step ${status}`;
-                if (status === 'completed') {
-                    step.innerHTML = '<i class="fas fa-check-circle"></i><span>' + step.querySelector('span').textContent + '</span>';
-                } else if (status === 'error') {
-                    step.innerHTML = '<i class="fas fa-exclamation-circle"></i><span>' + step.querySelector('span').textContent + '</span>';
-                }
-            }
-        }
-
-        // Add event listeners for copy and download buttons
-        const copyBtn = document.getElementById('copy-label-btn');
-        const downloadBtn = document.getElementById('download-label-btn');
-        const filenameInput = document.getElementById('filename-input');
-
-        if (copyBtn) {
-            copyBtn.addEventListener('click', copyLabelData);
-        }
-
-        if (downloadBtn) {
-            downloadBtn.addEventListener('click', downloadLabelData);
-        }
-
-        // Store the current label data for copy/download
-        let currentLabelData = null;
-        let currentDataType = null;
-
-        function copyLabelData() {
-            try {
-                // Look for the actual preview image in the preview container
-                const previewContainer = document.getElementById('preview-container');
-                const previewImage = previewContainer.querySelector('img, embed');
-                
-                if (previewImage && previewImage.tagName === 'IMG') {
-                    // For images, copy the image to clipboard
-                    copyImageToClipboard(previewImage);
-                } else if (previewImage && previewImage.tagName === 'EMBED') {
-                    // For PDF embeds, try to capture as image
-                    copyPDFAsImage(previewImage);
-                } else {
-                    // Fallback to copying data based on type
-                    copyDataBasedOnType();
-                }
-            } catch (error) {
-                console.error('Copy failed:', error);
-                // Fallback to original data copy
-                copyDataBasedOnType();
-            }
-        }
-
-        function copyImageToClipboard(imgElement) {
-            // Create a canvas to capture the image
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            
-            // Set canvas size to match image
-            canvas.width = imgElement.naturalWidth || imgElement.width;
-            canvas.height = imgElement.naturalHeight || imgElement.height;
-            
-            // Draw image to canvas
-            ctx.drawImage(imgElement, 0, 0);
-            
-            // Convert canvas to blob
-            canvas.toBlob(async (blob) => {
-                try {
-                    // Copy blob to clipboard
-                    await navigator.clipboard.write([
-                        new ClipboardItem({
-                            'image/png': blob
-                        })
-                    ]);
-                    showCopyNotification('Preview image copied to clipboard!', 'success');
-                } catch (error) {
-                    console.error('Failed to copy image to clipboard:', error);
-                    // Fallback to data copy
-                    copyDataBasedOnType();
-                }
-            }, 'image/png');
-        }
-
-        function copyPDFAsImage(embedElement) {
-            // For PDF embeds, we can't directly capture them as images
-            // So we'll fall back to copying the original Base64 data
-            copyDataBasedOnType();
-        }
-
-        function copyDataBasedOnType() {
-            try {
-                // Try to get the original Base64 input first
-                const base64Input = document.getElementById('base64-input');
-                if (base64Input && base64Input.value.trim()) {
-                    window.copyToClipboard(base64Input.value.trim());
-                    showCopyNotification('Base64 data copied to clipboard!', 'success');
-                    return;
-                }
-                
-                // If no Base64 input, try to copy current label data
-                if (currentLabelData) {
-                    window.copyToClipboard(currentLabelData);
-                    showCopyNotification('Label data copied to clipboard!', 'success');
-                    return;
-                }
-                
-                showCopyNotification('No data available to copy', 'error');
-            } catch (error) {
-                console.error('Data copy failed:', error);
-                showCopyNotification('Failed to copy data', 'error');
-            }
-        }
-
-        function downloadLabelData() {
-            try {
-                const filename = filenameInput.value.trim() || 'label';
-                let blob;
-                let extension;
-
-                // Look for the actual preview image in the preview container
-                const previewContainer = document.getElementById('preview-container');
-                const previewImage = previewContainer.querySelector('img, embed');
-
-                if (previewImage && previewImage.tagName === 'IMG') {
-                    // For images, download the actual preview image
-                    downloadImageFromElement(previewImage, filename);
-                    return;
-                } else if (previewImage && previewImage.tagName === 'EMBED') {
-                    // For PDF embeds, download the original PDF
-                    downloadPDFFromBase64(filename);
-                    return;
-                } else {
-                    // Fallback to downloading data based on type
-                    downloadDataBasedOnType(filename);
-                }
-            } catch (error) {
-                console.error('Download failed:', error);
-                showCopyNotification('Failed to download file', 'error');
-            }
-        }
-
-        function downloadImageFromElement(imgElement, filename) {
-            try {
-                // Create a canvas to capture the image
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                
-                // Set canvas size to match image
-                canvas.width = imgElement.naturalWidth || imgElement.width;
-                canvas.height = imgElement.naturalHeight || imgElement.height;
-                
-                // Draw image to canvas
-                ctx.drawImage(imgElement, 0, 0);
-                
-                // Convert canvas to blob and download
-                canvas.toBlob((blob) => {
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `${filename}.png`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                    
-                    showCopyNotification('Preview image downloaded successfully!', 'success');
-                }, 'image/png');
-            } catch (error) {
-                console.error('Failed to download image:', error);
-                // Fallback to data download
-                downloadDataBasedOnType(filename);
-            }
-        }
-
-        function downloadPDFFromBase64(filename) {
-            try {
-                const base64Data = document.getElementById('base64-input').value.trim();
-                const binaryString = atob(base64Data);
-                const bytes = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) {
-                    bytes[i] = binaryString.charCodeAt(i);
-                }
-                const blob = new Blob([bytes], { type: 'application/pdf' });
-                
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `${filename}.pdf`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                
-                showCopyNotification('PDF downloaded successfully!', 'success');
-            } catch (error) {
-                console.error('Failed to download PDF:', error);
-                showCopyNotification('Failed to download PDF', 'error');
-            }
-        }
-
-        function downloadDataBasedOnType(filename) {
-            try {
-                // Try to get the original Base64 input first
-                const base64Input = document.getElementById('base64-input');
-                if (base64Input && base64Input.value.trim()) {
-                    // Download the Base64 data as a text file
-                    const blob = new Blob([base64Input.value.trim()], { type: 'text/plain' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `${filename}.txt`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                    
-                    showCopyNotification('Base64 data downloaded successfully!', 'success');
-                    return;
-                }
-                
-                // If no Base64 input, try to download current label data
-                if (currentLabelData) {
-                    const blob = new Blob([currentLabelData], { type: 'text/plain' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `${filename}.txt`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                    
-                    showCopyNotification('Label data downloaded successfully!', 'success');
-                    return;
-                }
-                
-                showCopyNotification('No data available to download', 'error');
-            } catch (error) {
-                console.error('Data download failed:', error);
-                showCopyNotification('Failed to download file', 'error');
-            }
-        }
-
-        // Update the generateLabelPreview function to store data
-        const originalGenerateLabelPreview = window.generateLabelPreview;
-        window.generateLabelPreview = function(data, dataType) {
-            currentLabelData = data;
-            currentDataType = dataType;
-            return originalGenerateLabelPreview(data, dataType);
-        };
-    }
-
-    function initializeRangeJumping() {
-        const copyQueryBtn = document.getElementById('copy-query');
-        const insertScriptInput = document.getElementById('insert-script-input');
-        const jumpAmountInput = document.getElementById('jump-amount');
-        const generateUpdateBtn = document.getElementById('generate-update');
-        const clearRangeJumpBtn = document.getElementById('clear-range-jump');
-        const rangeJumpResults = document.getElementById('range-jump-results');
-        const updateScript = document.getElementById('update-script');
-        const copyUpdateScriptBtn = document.getElementById('copy-update-script');
-        const optionTabs = document.querySelectorAll('.option-tab');
-        const optionContents = document.querySelectorAll('.option-content');
-
-        optionTabs.forEach(tab => {
-            tab.addEventListener('click', function() {
-                const option = this.getAttribute('data-option');
-                
-                optionTabs.forEach(t => t.classList.remove('active'));
-                this.classList.add('active');
-                
-                optionContents.forEach(content => {
-                    content.classList.remove('active');
-                    if (content.id === option + '-content') {
-                        content.classList.add('active');
-                    }
-                });
-            });
-        });
-
-        copyQueryBtn.addEventListener('click', function() {
-            const queryText = document.getElementById('range-query').textContent;
-            window.copyToClipboard(queryText);
-        });
-
-        generateUpdateBtn.addEventListener('click', function() {
-            const insertScript = insertScriptInput.value.trim();
-            const jumpAmount = parseInt(jumpAmountInput.value) || 0;
-
-            if (!insertScript) {
-                alert('Please paste your INSERT script results first.');
-                return;
-            }
-
-            if (jumpAmount <= 0) {
-                alert('Please enter a valid jump amount (greater than 0).');
-                return;
-            }
-
-            try {
-                const updateScripts = generateUpdateScripts(insertScript, jumpAmount);
-                updateScript.textContent = updateScripts;
-                rangeJumpResults.style.display = 'block';
-                rangeJumpResults.scrollIntoView({ behavior: 'smooth' });
-            } catch (error) {
-                alert('Error generating update script: ' + error.message);
-            }
-        });
-
-        // Clear button
-        clearRangeJumpBtn.addEventListener('click', function() {
-            insertScriptInput.value = '';
-            jumpAmountInput.value = '';
-            rangeJumpResults.style.display = 'none';
-        });
-
-        copyUpdateScriptBtn.addEventListener('click', function() {
-            const scriptText = updateScript.textContent;
-            if (scriptText) {
-                window.copyToClipboard(scriptText);
-            }
-        });
-
-        function generateUpdateScripts(insertScript, jumpAmount) {
-            const lines = insertScript.split('\n').filter(line => line.trim());
-            const updateScripts = [];
-
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i].trim();
-                
-                if (line.toUpperCase().startsWith('VALUES')) {
-                    try {
-                        const valuesMatch = line.match(/VALUES\s*\(([^)]+)\)/i);
-                        if (valuesMatch) {
-                            const valuesString = valuesMatch[1];
-                            
-                            const cleanValues = parseValues(valuesString);
-                            
-                            // Generate UPDATE statements
-                            generateUpdateStatements(cleanValues, jumpAmount, updateScripts);
-                        }
-                    } catch (error) {
-                        console.error('Error parsing VALUES line:', error);
-                    }
-                }
-                
-                if (line.includes('(') && line.includes(')') && line.includes(',') && 
-                    !line.toUpperCase().startsWith('VALUES') && 
-                    !line.toUpperCase().includes('CONTRACT_NO') && 
-                    !line.toUpperCase().includes('RANGE_ID') &&
-                    (line.includes("'") || line.match(/\d+/))) {
-                    try {
-                        // Try to extract values from this line
-                        const valuesMatch = line.match(/\(([^)]+)\)/);
-                        if (valuesMatch) {
-                            const valuesString = valuesMatch[1];
-                            
-                            const cleanValues = parseValues(valuesString);
-                            
-                            // Generate UPDATE statements
-                            generateUpdateStatements(cleanValues, jumpAmount, updateScripts);
-                        }
-                    } catch (error) {
-                        console.error('Error parsing data line:', line, error);
-                    }
-                }
-            }
-
-            console.log('Generated update scripts:', updateScripts);
-
-            if (updateScripts.length === 0) {
-                throw new Error('No valid INSERT statements found. Please check your input format.');
-            }
-
-            return updateScripts.join('\n\n');
-        }
-
-        function parseValues(valuesString) {
-            const values = [];
-            let currentValue = '';
-            let inQuotes = false;
-            let quoteChar = '';
-            
-            for (let j = 0; j < valuesString.length; j++) {
-                const char = valuesString[j];
-                
-                if ((char === "'" || char === '"') && !inQuotes) {
-                    inQuotes = true;
-                    quoteChar = char;
-                    currentValue += char;
-                } else if (char === quoteChar && inQuotes) {
-                    inQuotes = false;
-                    quoteChar = '';
-                    currentValue += char;
-                } else if (char === ',' && !inQuotes) {
-                    values.push(currentValue.trim());
-                    currentValue = '';
-                } else {
-                    currentValue += char;
-                }
-            }
-            
-            if (currentValue.trim()) {
-                values.push(currentValue.trim());
-            }
-            
-            const cleanValues = values.map(v => v.replace(/^['"]|['"]$/g, ''));
-            return cleanValues;
-        }
-
-        function generateUpdateStatements(cleanValues, jumpAmount, updateScripts) {
-            if (cleanValues.length >= 9) {
-                const contractNo = cleanValues[0];
-                const rangeId = cleanValues[1];
-                const consCurNo = cleanValues[4];
-                const itemRangeId = cleanValues[5];
-                const curNo = cleanValues[8];
-
-                if (rangeId && consCurNo && !isNaN(parseInt(consCurNo))) {
-                    const newConsCurNo = parseInt(consCurNo) + jumpAmount;
-                    updateScripts.push(`UPDATE SHIP_RANGES SET cons_cur_no = ${newConsCurNo} WHERE ID = ${rangeId};`);
-                }
-
-                if (itemRangeId && curNo && !isNaN(parseInt(curNo))) {
-                    const newCurNo = parseInt(curNo) + jumpAmount;
-                    updateScripts.push(`UPDATE ITEM_RANGES SET cur_no = ${newCurNo} WHERE ID = ${itemRangeId};`);
-                }
-            }
-        }
-    }
-    
-
-    closeButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            toolModal.style.display = 'none';
-        });
-    });
-
-    document.addEventListener('keydown', function(event) {
-        if (event.key === 'Escape') {
-            toolModal.style.display = 'none';
-        }
-    });
-
-    window.addEventListener('scroll', function() {
-        const header = document.querySelector('.header');
-        if (window.scrollY > 100) {
-            header.style.background = 'rgba(255, 255, 255, 0.98)';
-            header.style.boxShadow = '0 2px 30px rgba(0, 0, 0, 0.15)';
-        } else {
-            header.style.background = 'rgba(255, 255, 255, 0.95)';
-            header.style.boxShadow = '0 2px 20px rgba(0, 0, 0, 0.1)';
-        }
-    });
-
-    });
-
-window.copyToClipboard = function(text) {
-    navigator.clipboard.writeText(text).then(() => {
-        showCopyNotification('Copied to clipboard!', 'success');
-    }).catch(err => {
-        console.error('Failed to copy: ', err);
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-        
-        showCopyNotification('Copied to clipboard!', 'success');
-    });
-};
-
-function showCopyNotification(message, type = 'success') {
-    const existingNotification = document.querySelector('.copy-notification');
-    if (existingNotification) {
-        existingNotification.remove();
-    }
-    
-    const notification = document.createElement('div');
-    notification.className = `copy-notification copy-notification-${type}`;
-    notification.innerHTML = `
-        <div class="notification-content">
-            <i class="fas fa-check-circle"></i>
-            <span>${message}</span>
-        </div>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        notification.classList.add('show');
-    }, 100);
-    
-    setTimeout(() => {
-        notification.classList.remove('show');
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.remove();
-            }
-        }, 300);
-    }, 2000);
-}
-
-    function initializeRouteMapping() {
-        const carrierServices = {
-            'DPD': [
-                { name: 'Next Day Delivery', code: '12' },
-                { name: 'Standard Delivery', code: '10' },
-                { name: 'Saturday Delivery', code: '15' }
-            ],
-            'DPD Local': [
-                { name: 'Same Day Local', code: 'L01' },
-                { name: 'Next Day Local', code: 'L02' }
-            ],
-            'DHL eCom': [
-                { name: 'Standard eCom', code: 'EC01' },
-                { name: 'Express eCom', code: 'EC02' },
-                { name: 'Premium eCom', code: 'EC03' }
-            ],
-            'Evri': [
-                { name: 'EVRI NEXT DAY IOD', code: 'Nday' },
-                { name: 'EVRI STANDARD', code: 'Std' },
-                { name: 'EVRI EXPRESS', code: 'Exp' }
-            ],
-            'UPS': [
-                { name: 'UPS Standard', code: 'UPS01' },
-                { name: 'UPS Express', code: 'UPS02' },
-                { name: 'UPS Next Day Air', code: 'UPS03' }
-            ],
-            'GFSI': [
-                { name: 'GFSI Standard', code: 'GFS01' },
-                { name: 'GFSI Express', code: 'GFS02' },
-                { name: 'GFSI Premium', code: 'GFS03' }
-            ]
-        };
-
-        const carrierSelect = document.getElementById('carrier-select');
-        const serviceSelect = document.getElementById('service-select');
-        const serviceCodeInput = document.getElementById('service-code');
-        const generateSqlBtn = document.getElementById('generate-sql');
-        const clearRouteBtn = document.getElementById('clear-route');
-        const routeResults = document.getElementById('route-results');
-        const sqlScript = document.getElementById('sql-script');
-        const copySqlBtn = document.getElementById('copy-sql');
-
-    carrierSelect.addEventListener('change', function() {
-        const selectedCarrier = this.value;
-        if (serviceSelect) serviceSelect.innerHTML = '';
-        if (serviceCodeInput) serviceCodeInput.value = '';
-        
-        const evriFields = document.getElementById('evri-fields');
-        if (selectedCarrier === 'Evri') {
-            evriFields.style.display = 'block';
-            if (serviceSelect) {
-                serviceSelect.disabled = true;
-                serviceSelect.innerHTML = '<option value="">Evri uses custom service selection below</option>';
-            }
-        } else {
-            evriFields.style.display = 'none';
-            if (serviceSelect) {
-                serviceSelect.disabled = true;
-                serviceSelect.innerHTML = '<option value="">No services required</option>';
-            }
-        }
-    });
-
-    if (serviceSelect) {
-        serviceSelect.addEventListener('change', function() {
-            const selectedOption = this.options[this.selectedIndex];
-            if (selectedOption && selectedOption.dataset.code && serviceCodeInput) {
-                serviceCodeInput.value = selectedOption.dataset.code;
-            } else if (serviceCodeInput) {
-                serviceCodeInput.value = '';
-            }
-        });
-    }
-
-    generateSqlBtn.addEventListener('click', function() {
-        const carrier = carrierSelect.value;
-        
-        if (!carrier) {
-            alert('Please select a carrier first.');
-            return;
-        }
-
-        let sql = '';
-        
-        if (carrier === 'Evri') {
-            sql = generateEvriSQL();
-        } else {
-            alert('Only Evri is supported right now.');
-            return;
-        }
-
-        if (sql) {
-            sqlScript.textContent = sql;
-            routeResults.style.display = 'block';
-            
-            routeResults.scrollIntoView({ behavior: 'smooth' });
-        }
-    });
-
-    function generateEvriSQL() {
-        const accountNumber = document.getElementById('evri-account').value;
-        const isIOD = document.getElementById('evri-iod').checked;
-        const isPOD = document.getElementById('evri-pod').checked;
-        const isNextDay = document.getElementById('evri-next-day').checked;
-        const is2Day = document.getElementById('evri-2-day').checked;
-        const routeDesc = document.getElementById('evri-route-desc').value || 'Evri';
-
-        if (!accountNumber || accountNumber < 0 || accountNumber > 9) {
-            alert('Please enter a valid account number (0-9).');
-            return '';
-        }
-
-        if (!isIOD && !isPOD) {
-            alert('Please select at least one delivery type (IOD or POD).');
-            return '';
-        }
-
-        if (!isNextDay && !is2Day) {
-            alert('Please select at least one service (Next Day or 2 Day).');
-            return '';
-        }
-
-        let sqlStatements = [];
-
-        if (isNextDay) {
-            if (isIOD) {
-                const routeCode = `ND${accountNumber}IOD`;
-                const contractNo = `7RY07${accountNumber}`;
-                sqlStatements.push(`insert into cust_routes (ROUTE_CODE,Carrier,CONTRACT_NO,SERVICE_CODE,ROUTE_DESC,PACKAGE_CODE,SATURDAY_DELIV) values ('${routeCode}','HERMES','${contractNo}','NDAY','${routeDesc} IOD',null,null);`);
-            }
-            if (isPOD) {
-                const routeCode = `ND${accountNumber}POD`;
-                const contractNo = `1RY01${accountNumber}`;
-                sqlStatements.push(`insert into cust_routes (ROUTE_CODE,Carrier,CONTRACT_NO,SERVICE_CODE,ROUTE_DESC,PACKAGE_CODE,SATURDAY_DELIV) values ('${routeCode}','HERMES','${contractNo}','NDAY','${routeDesc} POD',null,null);`);
-            }
-        }
-
-        if (is2Day) {
-            if (isIOD) {
-                const routeCode = `2D${accountNumber}IOD`;
-                const contractNo = `7RY07${accountNumber}`;
-                sqlStatements.push(`insert into cust_routes (ROUTE_CODE,Carrier,CONTRACT_NO,SERVICE_CODE,ROUTE_DESC,PACKAGE_CODE,SATURDAY_DELIV) values ('${routeCode}','HERMES','${contractNo}','2DAY','${routeDesc} IOD',null,null);`);
-            }
-            if (isPOD) {
-                const routeCode = `2D${accountNumber}POD`;
-                const contractNo = `1RY01${accountNumber}`;
-                sqlStatements.push(`insert into cust_routes (ROUTE_CODE,Carrier,CONTRACT_NO,SERVICE_CODE,ROUTE_DESC,PACKAGE_CODE,SATURDAY_DELIV) values ('${routeCode}','HERMES','${contractNo}','2DAY','${routeDesc} POD',null,null);`);
-            }
-        }
-
-        return sqlStatements.join('\n\n');
-    }
-
-    // Clear button
-    clearRouteBtn.addEventListener('click', function() {
-        carrierSelect.value = '';
-        if (serviceSelect) {
-            serviceSelect.innerHTML = '';
-            serviceSelect.disabled = true;
-        }
-        if (serviceCodeInput) serviceCodeInput.value = '';
-        
-        // Clear Evri-specific fields
-        document.getElementById('evri-fields').style.display = 'none';
-        document.getElementById('evri-account').value = '';
-        document.getElementById('evri-iod').checked = false;
-        document.getElementById('evri-pod').checked = false;
-        document.getElementById('evri-next-day').checked = false;
-        document.getElementById('evri-2-day').checked = false;
-        document.getElementById('evri-route-desc').value = '';
-        
-        routeResults.style.display = 'none';
-    });
-
-        copySqlBtn.addEventListener('click', function() {
-            const sqlText = sqlScript.textContent;
-            if (sqlText) {
-                window.copyToClipboard(sqlText);
-            }
-        });
-    }
+  });
+  
