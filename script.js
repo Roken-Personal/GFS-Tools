@@ -46,7 +46,7 @@ function initializeSettings(toolModal) {
     const themeSelect = document.getElementById('theme-select');
     if (themeSelect) themeSelect.value = theme;
   
-    const toolOrder = settings.toolOrder || ['range-splitting', 'label-preview', 'range-jumping', 'route-mapping', 'sql-search-macro'];
+    const toolOrder = settings.toolOrder || ['range-splitting', 'label-preview', 'range-jumping', 'route-mapping', 'formatter', 'sql-search-macro'];
     const toolVisibility = settings.toolVisibility || {
       'range-splitting': true,
       'label-preview': true,
@@ -298,12 +298,13 @@ function initializeSettings(toolModal) {
     const settings = JSON.parse(localStorage.getItem('gfs-settings') || '{}');
     const toolOrder = (settings.toolOrder && settings.toolOrder.length)
       ? settings.toolOrder
-      : ['range-splitting', 'label-preview', 'range-jumping', 'route-mapping', 'sql-search-macro'];
+      : ['range-splitting', 'label-preview', 'range-jumping', 'route-mapping', 'formatter', 'sql-search-macro'];
     const toolVisibility = settings.toolVisibility || {
       'range-splitting': true,
       'label-preview': true,
       'range-jumping': true,
       'route-mapping': true,
+      'formatter': true,
       'sql-search-macro': true
     };
   
