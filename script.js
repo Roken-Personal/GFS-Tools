@@ -524,8 +524,365 @@ function initializeSettings(toolModal) {
   }
   
   function initializeLabelPreview() {
-    // (left exactly as your working version; omitted here for brevity)
-    // If you need me to re-add the full label-preview logic, say the word.
+    const base64Input = document.getElementById('base64-input');
+    const dataLengthSpan = document.getElementById('data-length');
+    const processBtn = document.getElementById('process-label');
+    const clearBtn = document.getElementById('clear-label');
+    const processStatus = document.getElementById('process-status');
+    const labelResults = document.getElementById('label-results');
+    const labelError = document.getElementById('label-error');
+    
+    base64Input.addEventListener('input', function() {
+      const length = this.value.length;
+      dataLengthSpan.textContent = `${length.toLocaleString()} characters`;
+    });
+
+    processBtn.addEventListener('click', processLabel);
+    clearBtn.addEventListener('click', clearLabelInputs);
+
+    function processLabel() {
+      const base64Data = base64Input.value.trim();
+      if (!base64Data) {
+        showError('Please paste your Base64 encoded label data.');
+        return;
+      }
+
+      hideError();
+      hideResults();
+      showProcessStatus();
+      resetProcessSteps();
+
+      try {
+        updateProcessStep('step-decode', 'completed');
+        const decodedData = cleanAndDecodeBase64(base64Data);
+        
+        updateProcessStep('step-convert', 'completed');
+        const dataType = identifyDataType(decodedData);
+        
+        updateProcessStep('step-preview', 'completed');
+        generateLabelPreview(decodedData, dataType);
+        
+        hideProcessStatus();
+        showResults();
+        
+      } catch (error) {
+        console.error('Processing error:', error);
+        showError(`Processing failed: ${error.message}`);
+        hideProcessStatus();
+      }
+    }
+
+    function cleanAndDecodeBase64(base64String) {
+      try {
+        let cleaned = base64String;
+        
+        cleaned = cleaned.replace(/[\s\r\n\t]/g, '');
+        cleaned = cleaned.replace(/<\/?Image\/?/g, '');
+        cleaned = cleaned.replace(/[^A-Za-z0-9+/=]/g, '');
+        cleaned = cleaned.replace(/-/g, '+').replace(/_/g, '/');
+        
+        while (cleaned.length % 4 !== 0) {
+          cleaned += '=';
+        }
+        
+        cleaned = cleaned.replace(/=+$/, '');
+        while (cleaned.length % 4 !== 0) {
+          cleaned += '=';
+        }
+        
+        const decoded = atob(cleaned);
+        
+        const bytes = new Uint8Array(decoded.length);
+        for (let i = 0; i < decoded.length; i++) {
+          bytes[i] = decoded.charCodeAt(i);
+        }
+        
+        return bytes;
+      } catch (error) {
+        console.error('Base64 cleaning/decoding error:', error);
+        throw new Error(`Base64 processing failed: ${error.message}. Please check your input format.`);
+      }
+    }
+
+    function identifyDataType(data) {
+      if (data.length >= 4) {
+        const header = String.fromCharCode(...data.slice(0, 4));
+        
+        if (header === '%PDF' || header.startsWith('%PDF')) {
+          return 'PDF';
+        }
+        
+        const firstBytes = data.slice(0, 10);
+        const firstBytesText = String.fromCharCode(...firstBytes);
+        
+        if (firstBytesText.includes('%PDF')) {
+          return 'PDF';
+        }
+      }
+      
+      if (data.length >= 8) {
+        const pngHeader = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+        const jpgHeader = [0xFF, 0xD8, 0xFF];
+        
+        if (pngHeader.every((byte, i) => data[i] === byte)) {
+          return 'PNG Image';
+        }
+        if (jpgHeader.every((byte, i) => data[i] === byte)) {
+          return 'JPEG Image';
+        }
+      }
+      
+      const text = String.fromCharCode(...data);
+      
+      if (text.includes('^XA') || text.includes('^FO') || text.includes('^FD') || text.includes('^FS')) {
+        return 'ZPL Text';
+      }
+      
+      if (text.match(/^[\x20-\x7E\t\n\r]*$/)) {
+        const readableChars = text.replace(/[\x00-\x1F\x7F]/g, '').length;
+        const totalChars = text.length;
+        const readabilityRatio = readableChars / totalChars;
+        
+        const binaryPatterns = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\xA0-\xFF]/g;
+        const binaryCharCount = (text.match(binaryPatterns) || []).length;
+        const binaryRatio = binaryCharCount / totalChars;
+        
+        if (readabilityRatio > 0.9 && binaryRatio < 0.05) {
+          return 'Text';
+        } else if (readabilityRatio > 0.8 && binaryRatio < 0.1) {
+          return 'Text';
+        } else {
+          return 'Binary Data';
+        }
+      }
+      
+      return 'Binary Data';
+    }
+
+    function generateLabelPreview(data, dataType) {
+      const previewContainer = document.getElementById('preview-container');
+      const dataTypeSpan = document.getElementById('data-type');
+      const processedStatus = document.getElementById('processed-status');
+      
+      dataTypeSpan.textContent = dataType;
+      
+      if (dataType === 'PDF') {
+        processedStatus.textContent = 'Creating PDF preview...';
+        
+        const pdfBase64 = btoa(String.fromCharCode(...data));
+        const pdfDataUrl = `data:application/pdf;base64,${pdfBase64}`;
+        
+        const previewInfo = previewContainer.querySelector('.preview-info');
+        previewContainer.innerHTML = '';
+        if (previewInfo) {
+          previewContainer.appendChild(previewInfo);
+        }
+        
+        const pdfEmbed = document.createElement('embed');
+        pdfEmbed.src = pdfDataUrl;
+        pdfEmbed.type = 'application/pdf';
+        pdfEmbed.width = '100%';
+        pdfEmbed.height = '500';
+        pdfEmbed.style.cssText = 'border: 2px solid #e5e7eb; border-radius: 8px; margin: 10px 0; box-shadow: 0 4px 6px rgba(0,0,0,0.1);';
+        
+        previewContainer.appendChild(pdfEmbed);
+        
+        processedStatus.textContent = 'PDF preview created successfully';
+        return;
+      }
+      
+      if (dataType === 'PNG Image') {
+        processedStatus.textContent = 'Creating PNG preview...';
+        
+        const pngBase64 = btoa(String.fromCharCode(...data));
+        const pngDataUrl = `data:image/png;base64,${pngBase64}`;
+        
+        const previewInfo = previewContainer.querySelector('.preview-info');
+        previewContainer.innerHTML = '';
+        if (previewInfo) {
+          previewContainer.appendChild(previewInfo);
+        }
+        
+        const pngImg = document.createElement('img');
+        pngImg.src = pngDataUrl;
+        pngImg.alt = 'PNG Preview';
+        pngImg.style.cssText = 'max-width: 100%; height: auto; border: 2px solid #e5e7eb; border-radius: 8px; margin: 10px 0; box-shadow: 0 4px 6px rgba(0,0,0,0.1);';
+        
+        previewContainer.appendChild(pngImg);
+        
+        processedStatus.textContent = 'PNG preview created successfully';
+        return;
+      }
+      
+      if (dataType === 'JPEG Image') {
+        processedStatus.textContent = 'Creating JPEG preview...';
+        
+        const jpegBase64 = btoa(String.fromCharCode(...data));
+        const jpegDataUrl = `data:image/jpeg;base64,${jpegBase64}`;
+        
+        const previewInfo = previewContainer.querySelector('.preview-info');
+        previewContainer.innerHTML = '';
+        if (previewInfo) {
+          previewContainer.appendChild(previewInfo);
+        }
+        
+        const jpegImg = document.createElement('img');
+        jpegImg.src = jpegDataUrl;
+        jpegImg.alt = 'JPEG Preview';
+        jpegImg.style.cssText = 'max-width: 100%; height: auto; border: 2px solid #e5e7eb; border-radius: 8px; margin: 10px 0; box-shadow: 0 4px 6px rgba(0,0,0,0.1);';
+        
+        previewContainer.appendChild(jpegImg);
+        
+        processedStatus.textContent = 'JPEG preview created successfully';
+        return;
+      }
+      
+      processedStatus.textContent = 'Processing with Labelary API...';
+      
+      const previewInfo = previewContainer.querySelector('.preview-info');
+      previewContainer.innerHTML = '';
+      if (previewInfo) {
+        previewContainer.appendChild(previewInfo);
+      }
+      
+      const previewImg = document.createElement('img');
+      previewImg.id = 'label-preview-img';
+      previewImg.alt = 'Label Preview';
+      previewImg.style.cssText = 'max-width: 100%; height: auto; border: 2px solid #e5e7eb; border-radius: 8px; margin: 10px 0; box-shadow: 0 4px 6px rgba(0,0,0,0.1);';
+      previewContainer.appendChild(previewImg);
+      
+      const text = dataType === 'Text' ? String.fromCharCode(...data) : '';
+      const zplData = text ? `^XA^FO50,50^A0N,50,50^FD${text}^FS^XZ` : `^XA^FO50,50^A0N,50,50^FD${dataType} Data^FS^XZ`;
+      
+      fetch('https://api.labelary.com/v1/printers/8dpmm/labels/4x6/0/', {
+        method: 'POST',
+        headers: {
+          'Accept': 'image/png',
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: zplData
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const contentType = response.headers.get('content-type');
+        
+        if (contentType && contentType.includes('image/')) {
+          return response.blob();
+        } else {
+          throw new Error('Response is not an image');
+        }
+      })
+      .then(blob => {
+        const imageUrl = URL.createObjectURL(blob);
+        previewImg.src = imageUrl;
+        processedStatus.textContent = 'Label generated successfully';
+        previewImg.style.display = 'block';
+        previewImg.style.visibility = 'visible';
+      })
+      .catch(error => {
+        console.error('Labelary API error:', error);
+        createPlaceholderImage(previewImg, dataType === 'Binary Data' ? 'Binary Data - Cannot Preview' : `${dataType} Data`, dataType === 'Binary Data' ? '#dc2626' : '#f59e0b');
+        processedStatus.textContent = dataType === 'Binary Data' ? 'Binary data cannot be converted to label preview' : 'Processing failed, showing placeholder';
+        previewImg.style.display = 'block';
+        previewImg.style.visibility = 'visible';
+      });
+    }
+
+    function createPlaceholderImage(imgElement, text, color) {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      canvas.width = 400;
+      canvas.height = 300;
+      
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+      
+      ctx.fillStyle = color;
+      ctx.font = 'bold 24px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+      
+      ctx.font = '16px Inter, sans-serif';
+      ctx.fillStyle = '#666';
+      ctx.fillText('Labelary Preview', canvas.width / 2, canvas.height / 2 + 40);
+      
+      imgElement.src = canvas.toDataURL('image/png');
+    }
+
+    function clearLabelInputs() {
+      base64Input.value = '';
+      dataLengthSpan.textContent = '0 characters';
+      hideResults();
+      hideError();
+      hideProcessStatus();
+      
+      const previewContainer = document.getElementById('preview-container');
+      const dataTypeSpan = document.getElementById('data-type');
+      const processedStatus = document.getElementById('processed-status');
+      
+      if (dataTypeSpan) dataTypeSpan.textContent = '-';
+      if (processedStatus) processedStatus.textContent = '';
+      
+      if (previewContainer) {
+        const previewInfo = previewContainer.querySelector('.preview-info');
+        previewContainer.innerHTML = '';
+        if (previewInfo) {
+          previewContainer.appendChild(previewInfo);
+        }
+      }
+    }
+
+    function showProcessStatus() {
+      processStatus.style.display = 'block';
+    }
+
+    function hideProcessStatus() {
+      processStatus.style.display = 'none';
+    }
+
+    function showResults() {
+      labelResults.style.display = 'block';
+    }
+
+    function hideResults() {
+      labelResults.style.display = 'none';
+    }
+
+    function showError(message) {
+      document.getElementById('error-text').textContent = message;
+      labelError.style.display = 'block';
+    }
+
+    function hideError() {
+      labelError.style.display = 'none';
+    }
+
+    function resetProcessSteps() {
+      document.querySelectorAll('.status-step').forEach(step => {
+        step.className = 'status-step';
+        step.innerHTML = '<i class="fas fa-circle"></i><span>' + step.querySelector('span').textContent + '</span>';
+      });
+    }
+
+    function updateProcessStep(stepId, status) {
+      const step = document.getElementById(stepId);
+      if (step) {
+        step.className = `status-step ${status}`;
+        if (status === 'completed') {
+          step.innerHTML = '<i class="fas fa-check-circle"></i><span>' + step.querySelector('span').textContent + '</span>';
+        } else if (status === 'error') {
+          step.innerHTML = '<i class="fas fa-exclamation-circle"></i><span>' + step.querySelector('span').textContent + '</span>';
+        }
+      }
+    }
   }
   
   function initializeRouteMapping() {
