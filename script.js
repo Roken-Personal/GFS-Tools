@@ -599,14 +599,21 @@ function initializeSettings(toolModal) {
     const output = document.getElementById('update-script');
     const copyBtn = document.getElementById('copy-update-script');
   
-    // Provide a sensible default query text to copy
     const RANGE_QUERY_TEXT = [
-      '-- Query to get current ranges',
       'SELECT',
-      '  sr.id AS ship_range_id, sr.cons_cur_no,',
-      '  ir.id AS item_range_id, ir.cur_no',
-      'FROM ship_ranges sr',
-      'LEFT JOIN item_ranges ir ON ir.ship_range_id = sr.id;'
+      '    csc.contract_no,',
+      '    csc.RANGE_ID,',
+      '    sr.cons_start_no,',
+      '    sr.cons_end_no,',
+      '    sr.cons_cur_no,',
+      '    csc.ITEM_RANGE_ID,',
+      '    ir.START_NO,',
+      '    ir.END_NO,',
+      '    ir.CUR_NO',
+      'FROM cust_site_contracts csc',
+      'INNER JOIN SHIP_RANGES sr ON csc.RANGE_ID = sr.ID',
+      'INNER JOIN ITEM_RANGES ir ON csc.ITEM_RANGE_ID = ir.ID',
+      'WHERE NOT (sr.cons_cur_no = 1 AND sr.cons_end_no = 1);'
     ].join('\n');
   
     copyQueryBtn.addEventListener('click', () => copyToClipboard(RANGE_QUERY_TEXT));
@@ -847,7 +854,22 @@ function initializeSettings(toolModal) {
     function run(pretty) {
       clearError();
       try {
-        const txt = input.value;
+        let txt = input.value;
+        
+        // Apply text mode trimming based on selection
+        const trimMode = trimSel?.value || 'ends';
+        switch (trimMode) {
+          case 'ends':
+            txt = txt.trim();
+            break;
+          case 'lines':
+            txt = txt.split('\n').map(line => line.trim()).join('\n');
+            break;
+          case 'none':
+            // No trimming - keep as-is
+            break;
+        }
+        
         const which = detectMode(txt);
         let result = '';
         if (which === 'json') {
