@@ -121,22 +121,12 @@ function initializeSettings(toolModal) {
   }
   
   function saveSettings() {
-    // Get theme from dropdown if available, otherwise from body attribute
-    const themeSelect = document.getElementById('theme-select');
-    const currentTheme = document.body.getAttribute('data-theme') || 'light';
-    const theme = themeSelect?.value || currentTheme;
-    
     const settings = {
-      theme: theme,
+      theme: document.getElementById('theme-select')?.value || 'light',
       toolOrder: getCurrentToolOrder(),
       toolVisibility: getCurrentToolVisibility()
     };
     localStorage.setItem('gfs-settings', JSON.stringify(settings));
-    
-    // Update dropdown to match actual theme if it exists
-    if (themeSelect && !themeSelect.value) {
-      themeSelect.value = currentTheme === 'dark' ? 'dark' : currentTheme === 'light' ? 'light' : 'auto';
-    }
   }
   
   function applyTheme(theme) {
@@ -388,18 +378,16 @@ function initializeSettings(toolModal) {
     
     slider.addEventListener('click', () => {
       const dark = !(document.body.getAttribute('data-theme') === 'dark');
-      const newTheme = dark ? 'dark' : 'light';
-      applyTheme(newTheme);
-      modal.setAttribute('data-theme', newTheme);
+      applyTheme(dark ? 'dark' : 'light');
+      modal.setAttribute('data-theme', dark ? 'dark' : 'light');
       setSlider(dark);
       updateModalColors(dark);
       
-      // Update dropdown in regular settings modal if it exists
+      // Update dropdown and save
       const themeSelect = document.getElementById('theme-select');
       if (themeSelect) {
-        themeSelect.value = newTheme;
+        themeSelect.value = dark ? 'dark' : 'light';
       }
-      
       saveSettings();
       
       // Also update tool list colors
