@@ -25,7 +25,67 @@ function initializeSettings(toolModal) {
       themeSelect.addEventListener('change', (e) => {
         applyTheme(e.target.value);
         saveSettings();
+        
+        // Update simple settings modal if it's open
+        const simpleModal = document.getElementById('simple-settings-modal');
+        if (simpleModal) {
+          const isDark = e.target.value === 'dark' || (e.target.value === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          updateSimpleModalColors(simpleModal, isDark);
+        }
       });
+    }
+    
+    // Function to update simple modal colors (used when theme changes externally)
+    function updateSimpleModalColors(modalElement, isDarkMode) {
+      const content = modalElement.querySelector('div');
+      if (!content) return;
+      
+      const titleColor = isDarkMode ? '#ffffff' : '#1a1a1a';
+      const textColor = isDarkMode ? '#ffffff' : '#1a1a1a';
+      const textSecondary = isDarkMode ? '#cccccc' : '#333333';
+      const labelColor = isDarkMode ? '#cccccc' : '#333333';
+      
+      // Update Settings title
+      const h2 = content.querySelector('h2');
+      if (h2) h2.style.color = titleColor;
+      
+      // Update section headings
+      const h3s = content.querySelectorAll('h3');
+      h3s.forEach(h3 => h3.style.color = titleColor);
+      
+      // Update Light/Dark labels
+      const spans = content.querySelectorAll('div > span');
+      spans.forEach(span => {
+        if (span.textContent === 'Light' || span.textContent === 'Dark') {
+          span.style.color = labelColor;
+        }
+      });
+      
+      // Update description paragraph
+      const p = content.querySelector('p');
+      if (p) p.style.color = textSecondary;
+      
+      // Update close button
+      const closeBtn = document.getElementById('close-simple-settings');
+      if (closeBtn) closeBtn.style.color = textColor;
+      
+      // Update slider
+      const slider = document.getElementById('theme-toggle-slider');
+      if (slider) {
+        const knob = slider.querySelector('div');
+        if (knob) {
+          slider.style.background = isDarkMode ? '#333333' : '#ffffff';
+          slider.style.borderColor = isDarkMode ? '#555555' : '#000000';
+          knob.style.background = isDarkMode ? '#ffffff' : '#000000';
+          knob.style.transform = isDarkMode ? 'translateX(30px)' : 'translateX(0)';
+        }
+      }
+      
+      // Re-populate tool list with updated colors
+      const toolListContainer = document.getElementById('simple-tool-list');
+      if (toolListContainer) {
+        populateSimpleToolList();
+      }
     }
     if (resetBtn) {
       resetBtn.addEventListener('click', resetSettings);
@@ -41,7 +101,7 @@ function initializeSettings(toolModal) {
   function loadSettings() {
     const settings = JSON.parse(localStorage.getItem('gfs-settings') || '{}');
   
-    const theme = settings.theme || 'dark';
+    const theme = settings.theme || 'light';
     applyTheme(theme);
     const themeSelect = document.getElementById('theme-select');
     if (themeSelect) themeSelect.value = theme;
@@ -62,7 +122,7 @@ function initializeSettings(toolModal) {
   
   function saveSettings() {
     const settings = {
-      theme: document.getElementById('theme-select')?.value || 'dark',
+      theme: document.getElementById('theme-select')?.value || 'light',
       toolOrder: getCurrentToolOrder(),
       toolVisibility: getCurrentToolVisibility()
     };
@@ -225,8 +285,14 @@ function initializeSettings(toolModal) {
     modal.style.cssText = `
       position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:10000;
       display:flex;align-items:center;justify-content:center;`;
-    modal.setAttribute('data-theme', document.body.getAttribute('data-theme') || 'dark');
+    modal.setAttribute('data-theme', document.body.getAttribute('data-theme') || 'light');
   
+    const currentTheme = (document.body.getAttribute('data-theme') || 'light') === 'dark';
+    const titleColor = currentTheme ? '#ffffff' : '#1a1a1a';
+    const textColor = currentTheme ? '#ffffff' : '#1a1a1a';
+    const textSecondary = currentTheme ? '#cccccc' : '#333333';
+    const labelColor = currentTheme ? '#cccccc' : '#333333';
+    
     const content = document.createElement('div');
     content.style.cssText = `
       background:var(--bg-primary,#2a2a2a);color:var(--text-primary,#fff);
@@ -234,25 +300,25 @@ function initializeSettings(toolModal) {
       overflow:auto;border:1px solid var(--border-color,#444)`;
     content.innerHTML = `
       <div style="position:relative;margin-bottom:1rem;">
-        <h2 style="margin:0;">Settings</h2>
+        <h2 style="margin:0;color:${titleColor};">Settings</h2>
         <button id="close-simple-settings" class="close-modal-btn"
           style="position:absolute;top:0;right:0;width:40px;height:40px;border-radius:50%;
-                 border:1px solid var(--border-color);background:var(--bg-tertiary);color:var(--text-primary);">
+                 border:1px solid var(--border-color);background:var(--bg-tertiary);color:${textColor};">
           <i class="fas fa-times"></i>
         </button>
       </div>
       <div style="height:1px;background:var(--border-color,#666);margin:1rem 0 1.5rem;"></div>
-      <h3>Theme</h3>
+      <h3 style="color:${titleColor};font-weight:600;margin-bottom:1rem;">Theme</h3>
       <div style="display:flex;align-items:center;gap:1rem;">
-        <span>Light</span>
+        <span style="color:${labelColor};font-weight:500;">Light</span>
         <div id="theme-toggle-slider" style="width:60px;height:30px;border-radius:15px;border:1px solid var(--border-color,#666);position:relative;cursor:pointer;">
           <div style="position:absolute;top:2px;left:2px;width:24px;height:24px;border-radius:50%;"></div>
         </div>
-        <span>Dark</span>
+        <span style="color:${labelColor};font-weight:500;">Dark</span>
       </div>
       <div style="height:1px;background:var(--border-color,#666);margin:1.5rem 0;"></div>
-      <h3>Tool Management</h3>
-      <p>Drag tools to reorder them, or toggle to show/hide tools you don't use.</p>
+      <h3 style="color:${titleColor};font-weight:600;margin-bottom:1rem;">Tool Management</h3>
+      <p style="color:${textSecondary};margin-bottom:1rem;">Drag tools to reorder them, or toggle to show/hide tools you don't use.</p>
       <div id="simple-tool-list" style="display:flex;flex-direction:column;gap:.5rem;"></div>
       <div style="height:1px;background:var(--border-color,#666);margin:1.5rem 0;"></div>
       <div style="text-align:center;">
@@ -269,7 +335,7 @@ function initializeSettings(toolModal) {
   
     const slider = document.getElementById('theme-toggle-slider');
     const knob = slider.querySelector('div');
-    const isDark = (document.body.getAttribute('data-theme') || 'dark') === 'dark';
+    const isDark = (document.body.getAttribute('data-theme') || 'light') === 'dark';
     const setSlider = (dark) => {
       slider.style.background = dark ? '#333333' : '#ffffff';
       slider.style.borderColor = dark ? '#555555' : '#000000';
@@ -277,12 +343,49 @@ function initializeSettings(toolModal) {
       knob.style.transform = dark ? 'translateX(30px)' : 'translateX(0)';
     };
     setSlider(isDark);
+    
+    // Function to update modal colors when theme changes
+    const updateModalColors = (isDarkMode) => {
+      const titleColor = isDarkMode ? '#ffffff' : '#1a1a1a';
+      const textColor = isDarkMode ? '#ffffff' : '#1a1a1a';
+      const textSecondary = isDarkMode ? '#cccccc' : '#333333';
+      const labelColor = isDarkMode ? '#cccccc' : '#333333';
+      
+      // Update Settings title
+      const h2 = content.querySelector('h2');
+      if (h2) h2.style.color = titleColor;
+      
+      // Update section headings
+      const h3s = content.querySelectorAll('h3');
+      h3s.forEach(h3 => h3.style.color = titleColor);
+      
+      // Update Light/Dark labels
+      const spans = content.querySelectorAll('div > span');
+      spans.forEach(span => {
+        if (span.textContent === 'Light' || span.textContent === 'Dark') {
+          span.style.color = labelColor;
+        }
+      });
+      
+      // Update description paragraph
+      const p = content.querySelector('p');
+      if (p) p.style.color = textSecondary;
+      
+      // Update close button
+      const closeBtn = document.getElementById('close-simple-settings');
+      if (closeBtn) closeBtn.style.color = textColor;
+    };
+    
     slider.addEventListener('click', () => {
       const dark = !(document.body.getAttribute('data-theme') === 'dark');
       applyTheme(dark ? 'dark' : 'light');
       modal.setAttribute('data-theme', dark ? 'dark' : 'light');
       setSlider(dark);
+      updateModalColors(dark);
       saveSettings();
+      
+      // Also update tool list colors
+      populateSimpleToolList();
     });
   
     modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
@@ -330,14 +433,18 @@ function initializeSettings(toolModal) {
         display:flex;align-items:center;gap:1rem;padding:1rem;
         background:var(--bg-secondary,#333);border:1px solid var(--border-color,#555);
         border-radius:8px;cursor:move`;
+      const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
+      const textColor = isDarkMode ? '#ffffff' : '#1a1a1a';
+      const textSecondary = isDarkMode ? '#cccccc' : '#333333';
+      const textMuted = isDarkMode ? '#888888' : '#333333';
       item.innerHTML = `
-        <div style="color:var(--text-secondary,#888);cursor:grab;">⋮⋮</div>
+        <div style="color:${textSecondary};cursor:grab;">⋮⋮</div>
         <div style="flex:1;">
-          <h4 style="margin:0;">${tool.name}</h4>
-          <p style="margin:0;opacity:.8;font-size:.9rem;">${tool.description}</p>
+          <h4 style="margin:0;color:${textColor};font-weight:600;">${tool.name}</h4>
+          <p style="margin:0;color:${textMuted};font-size:.9rem;">${tool.description}</p>
         </div>
         <div style="display:flex;align-items:center;gap:.5rem;">
-          <span>Show</span>
+          <span style="color:${textMuted};font-weight:500;">Show</span>
           <div class="simple-toggle" data-tool-id="${toolId}"
                style="width:44px;height:24px;border-radius:12px;position:relative;cursor:pointer;
                       background:${toolVisibility[toolId] ? '#4CAF50' : '#666'};">

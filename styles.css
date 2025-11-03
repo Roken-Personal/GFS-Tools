@@ -1,26 +1,26 @@
 /* Color Variables */
 :root {
-    /* Light Mode */
-    --bg-primary: #f5f5f5;
+    /* Light Mode - GFS Brand Colors */
+    --bg-primary: #ffffff;
     --bg-secondary: #ffffff;
-    --bg-tertiary: #f1f5f9;
-    --text-primary: #000000;
-    --text-secondary: #000000;
-    --text-muted: #000000;
-    --border-color: #e2e8f0;
-    --border-hover: #cbd5e1;
+    --bg-tertiary: #f5f5f5;
+    --text-primary: #333333;
+    --text-secondary: #333333;
+    --text-muted: #666666;
+    --border-color: #cccccc;
+    --border-hover: #999999;
     --shadow: rgba(0, 0, 0, 0.1);
     --shadow-hover: rgba(0, 0, 0, 0.15);
-    --accent-primary: #6b7280;
-    --accent-hover: #374151;
-    --accent-secondary: #6b7280;
+    --accent-primary: #3377FF;
+    --accent-hover: #2965e6;
+    --accent-secondary: #2173B3;
     --success: #10b981;
     --warning: #f59e0b;
-    --error: #ef4444;
+    --error: #E02020;
     --modal-overlay: rgba(0, 0, 0, 0.5);
     --header-bg: #ffffff;
-    --icon-color: #6b7280;
-    --bg-hover: #f8fafc;
+    --icon-color: #3377FF;
+    --bg-hover: #f0f7ff;
     /* added */
 }
 
@@ -79,9 +79,6 @@
     background: #2a2a2a !important;
 }
 
-[data-theme="dark"] .nav-logo {
-    color: #ffffff !important;
-}
 
 [data-theme="dark"] .btn-primary,
 [data-theme="dark"] .btn-secondary,
@@ -116,7 +113,7 @@ html {
 }
 
 body {
-    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     line-height: 1.6;
     color: var(--text-primary);
     background-color: var(--bg-primary);
@@ -216,23 +213,49 @@ p {
     transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
+/* Light mode: Blue header background */
+:root .header {
+    background: #0043a8;
+    border-bottom: none;
+}
+
+:root .settings-toggle {
+    border-color: rgba(255, 255, 255, 0.3);
+    color: white;
+    background-color: transparent;
+}
+
+:root .settings-toggle:hover {
+    border-color: white;
+    background-color: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
 .navbar {
-    padding: 1rem 0;
+    padding: 1.25rem 0;
+}
+
+/* Light mode: More padding for blue header */
+:root .navbar {
+    padding: 1.5rem 0;
 }
 
 .nav-container {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 20px;
+    position: relative;
 }
 
 .nav-controls {
     display: flex;
     align-items: center;
     gap: 1rem;
+    position: absolute;
+    right: 20px;
 }
 
 .settings-toggle {
@@ -269,14 +292,25 @@ p {
 .nav-logo {
     display: flex;
     align-items: center;
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--text-primary);
+    justify-content: center;
+    flex: 1;
 }
 
-.nav-logo i {
-    margin-right: 0.5rem;
-    font-size: 2rem;
+.logo-image {
+    height: 70px;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+    transition: opacity 0.3s ease;
+}
+
+.logo-image:hover {
+    opacity: 0.9;
+}
+
+/* Light mode: Larger logo */
+:root .logo-image {
+    height: 80px;
 }
 
 /* Tools */
@@ -287,6 +321,11 @@ p {
     display: flex;
     align-items: flex-start;
     padding-top: 100px;
+}
+
+/* Light mode: More padding for larger blue header */
+:root .tools-section {
+    padding-top: 140px;
 }
 
 /* Grid */
@@ -441,8 +480,13 @@ p {
 
 .modal-header h2 {
     margin: 0;
-    color: var(--text-primary);
+    color: #1a1a1a !important;
     font-size: 1.5rem;
+    font-weight: 600;
+}
+
+:root .modal-header h2 {
+    color: #1a1a1a !important;
 }
 
 .close {
@@ -970,17 +1014,25 @@ p {
 }
 
 .settings-section h3 {
-    color: var(--text-primary);
+    color: #1a1a1a !important;
     margin-bottom: 1rem;
     font-size: 1.2rem;
     font-weight: 600;
 }
 
+:root .settings-section h3 {
+    color: #1a1a1a !important;
+}
+
 .settings-description {
-    color: var(--text-secondary);
+    color: #333333 !important;
     margin-bottom: 1rem;
     font-size: 0.9rem;
     line-height: 1.5;
+}
+
+:root .settings-description {
+    color: #333333 !important;
 }
 
 .setting-item {
@@ -991,9 +1043,13 @@ p {
 }
 
 .setting-item label {
-    color: var(--text-primary);
+    color: #1a1a1a !important;
     font-weight: 500;
     min-width: 80px;
+}
+
+:root .setting-item label {
+    color: #1a1a1a !important;
 }
 
 .setting-item select {
@@ -1001,9 +1057,18 @@ p {
     border: 1px solid var(--border-color);
     border-radius: 6px;
     background: var(--bg-primary);
-    color: var(--text-primary);
+    color: #1a1a1a !important;
     font-size: 0.9rem;
     min-width: 150px;
+}
+
+:root .setting-item select {
+    color: #1a1a1a !important;
+}
+
+.setting-item select option {
+    color: #1a1a1a !important;
+    background: #ffffff !important;
 }
 
 .setting-item select:focus {
@@ -1072,21 +1137,114 @@ p {
 
 .tool-order-item .tool-details h4 {
     margin: 0;
-    color: var(--text-primary);
+    color: #1a1a1a !important;
     font-size: 1rem;
     font-weight: 600;
 }
 
+:root .tool-order-item .tool-details h4 {
+    color: #1a1a1a !important;
+}
+
 .tool-order-item .tool-details p {
     margin: 0;
-    color: var(--text-secondary);
+    color: #333333 !important;
     font-size: 0.85rem;
+}
+
+:root .tool-order-item .tool-details p {
+    color: #333333 !important;
 }
 
 .tool-order-item .tool-toggle {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    color: #333333 !important;
+    font-weight: 500;
+}
+
+:root .tool-order-item .tool-toggle {
+    color: #333333 !important;
+}
+
+.tool-order-item .tool-toggle span {
+    color: #333333 !important;
+    font-weight: 500;
+}
+
+:root .tool-order-item .tool-toggle span {
+    color: #333333 !important;
+}
+
+:root .tool-order-item .drag-handle {
+    color: #333333 !important;
+}
+
+/* Dark mode overrides for settings */
+[data-theme="dark"] .settings-section h3 {
+    color: #ffffff;
+}
+
+[data-theme="dark"] .settings-description {
+    color: #cccccc;
+}
+
+[data-theme="dark"] .setting-item label {
+    color: #ffffff;
+}
+
+[data-theme="dark"] .tool-order-item .tool-details h4 {
+    color: #ffffff;
+}
+
+[data-theme="dark"] .tool-order-item .tool-details p {
+    color: #cccccc;
+}
+
+[data-theme="dark"] .tool-order-item .tool-toggle {
+    color: #cccccc;
+}
+
+[data-theme="dark"] .tool-order-item .tool-toggle span {
+    color: #cccccc;
+}
+
+[data-theme="dark"] .tool-order-item .drag-handle {
+    color: #cccccc;
+}
+
+/* Simple tool items - ensure proper text colors in light mode */
+.simple-tool-item h4 {
+    color: #1a1a1a !important;
+}
+
+.simple-tool-item p {
+    color: #333333 !important;
+}
+
+:root .simple-tool-item h4 {
+    color: #1a1a1a !important;
+}
+
+:root .simple-tool-item p {
+    color: #333333 !important;
+}
+
+:root .simple-tool-item > div:first-child {
+    color: #333333 !important;
+}
+
+:root .simple-tool-item span {
+    color: #333333 !important;
+}
+
+[data-theme="dark"] .simple-tool-item h4 {
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .simple-tool-item p {
+    color: #cccccc !important;
 }
 
 .tool-order-item .toggle-switch {
@@ -1160,8 +1318,24 @@ p {
         padding: 100px 0 60px;
     }
 
+    :root .tools-section {
+        padding-top: 120px;
+    }
+
     .container {
         padding: 0 15px;
+    }
+
+    .logo-image {
+        height: 50px;
+    }
+
+    :root .logo-image {
+        height: 60px;
+    }
+
+    .nav-controls {
+        right: 15px;
     }
 
     .tool-buttons {
@@ -1343,7 +1517,7 @@ p {
     opacity: 0;
     transition: all 0.3s ease;
     max-width: 300px;
-    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 .copy-notification.show {
