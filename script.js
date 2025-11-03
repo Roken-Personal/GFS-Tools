@@ -121,8 +121,11 @@ function initializeSettings(toolModal) {
   }
   
   function saveSettings() {
+    // Get current theme directly from body attribute - this is the source of truth
+    const currentTheme = document.body.getAttribute('data-theme') || 'light';
+    
     const settings = {
-      theme: document.getElementById('theme-select')?.value || 'light',
+      theme: currentTheme, // Save the actual theme state (light or dark)
       toolOrder: getCurrentToolOrder(),
       toolVisibility: getCurrentToolVisibility()
     };
